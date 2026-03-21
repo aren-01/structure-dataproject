@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>User Interface</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 15px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    .box {
+      flex: 1;
+      width: 100%;
+      font-size: 18px;
+      padding: 10px;
+      box-sizing: border-box;
+      resize: none;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background: blue;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <textarea id="outputBox" class="box" placeholder="Structured output will appear here..." disabled></textarea>
+  <textarea id="inputBox" class="box" placeholder="Type here..."></textarea>
+
+  <button id="submitBtn">Structure it!</button>
+
+  <script>
+    const API_URL = "__API_URL__/project-stage/generate";
+
+    const inputBox = document.getElementById("inputBox");
+    const outputBox = document.getElementById("outputBox");
+    const submitBtn = document.getElementById("submitBtn");
+
+    submitBtn.addEventListener("click", async () => {
+      const prompt = inputBox.value.trim();
+
+      if (!prompt) {
+        outputBox.value = "Please enter some text first.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      outputBox.value = "Processing...";
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ prompt })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          outputBox.value = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        outputBox.value = JSON.stringify(data.output, null, 2);
+
+      } catch (error) {
+        outputBox.value = "Network error: " + error.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+
+</body>
+</html>
