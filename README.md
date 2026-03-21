@@ -17,8 +17,17 @@ engineering is a good method to structure data and the model response. A
 sample I/O is below:
 
 User input:
-
+```
+Hello! I am a graduate student and my major is IT!
+```
 Output:
+```
+{
+  "name": "Graduate Student",
+  "major": "IT",
+  "id": "a31b6166-e799-4052-a6dd-69f1019900d9"
+}
+```
 
 How to start CI/CD automation step-by-step:
 
