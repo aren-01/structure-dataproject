@@ -60,7 +60,7 @@ to manually insert the lambda code or change the API path on the index
 file.
 
 
-<img src="images/media/image2.jpeg" />
-<img src="images/media/image3.jpeg" />
-<img src="images/media/image4.jpeg" />
+<img src="images/media/image2.png" />
+<img src="images/media/image3.png" />
+<img src="images/media/image4.png" />
  
