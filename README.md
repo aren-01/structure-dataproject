@@ -31,7 +31,7 @@ Output:
 
 How to start CI/CD automation step-by-step:
 
-1.  Clone the entire Git.
+1.  Fork the entire Git.
 
 2.  Define the following secrets on Secrets and Variables
 
