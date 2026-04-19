@@ -8,15 +8,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -24,41 +21,46 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      
       - name: Terraform Init
         working-directory: ./terraform
         run: terraform init
 
-      
       - name: Terraform Apply
         working-directory: ./terraform
         run: |
           terraform apply -auto-approve \
           -var="bucket_name=${{ secrets.S3_BUCKET_NAME }}"
 
-      
-      - name: Get API URL
+      - name: Get deployment outputs
         working-directory: ./terraform
         run: |
           echo "API_URL=$(terraform output -raw api_url)" >> $GITHUB_ENV
+          echo "COGNITO_REGION=$(terraform output -raw cognito_region)" >> $GITHUB_ENV
+          echo "COGNITO_USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)" >> $GITHUB_ENV
+          echo "COGNITO_CLIENT_ID=$(terraform output -raw cognito_user_pool_client_id)" >> $GITHUB_ENV
 
-      
-      - name: Inject API URL into index.html
+      - name: Inject runtime config into HTML
         run: |
           cp index-file/index.html index-file/index.tmp.html
+          cp index-file/login.html index-file/login.tmp.html
+
           sed -i "s|__API_URL__|$API_URL|g" index-file/index.tmp.html
 
-      
-      - name: Upload index.html to S3
-        run: |
-          aws s3 cp  index-file/index.tmp.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html
+          sed -i "s|__COGNITO_REGION__|$COGNITO_REGION|g" index-file/login.tmp.html
+          sed -i "s|__COGNITO_USER_POOL_ID__|$COGNITO_USER_POOL_ID|g" index-file/login.tmp.html
+          sed -i "s|__COGNITO_CLIENT_ID__|$COGNITO_CLIENT_ID|g" index-file/login.tmp.html
 
-      
+      - name: Upload static site files to S3
+        run: |
+          aws s3 cp index-file/index.tmp.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
+            --content-type text/html
+          aws s3 cp index-file/login.tmp.html s3://${{ secrets.S3_BUCKET_NAME }}/login.html \
+            --content-type text/html
+
       - name: Zip Lambda function
         working-directory: ./lambda-function
         run: zip function.zip structured_dataproject.py
 
-      
       - name: Update Lambda code
         working-directory: ./lambda-function
         run: |
