@@ -1,7 +1,6 @@
 # Structure Your Data!
 
-<img src="images/media/image1.jpeg"
-style="width:6.26528in;height:3.20486in" />
+<img src="images/media/image5.jpeg" />
 
 This is the cloud system I designed to structure data with the help of
 Bedrock and Amazon Nova Micro LLM in an AWS free tier account. This
@@ -63,4 +62,7 @@ file.
 <img src="images/media/image2.png" />
 <img src="images/media/image3.png" />
 <img src="images/media/image4.png" />
+
+Improvements
++ Added sign up and user management feature using Cognito
  
