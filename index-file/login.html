@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --brand: #2563eb;
+      --brand-strong: #1d4ed8;
+      --radius: 14px;
+      --shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+      --success: #166534;
+      --danger: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%, #dbeafe 0%, transparent 35%),
+        radial-gradient(circle at 90% 90%, #dcfce7 0%, transparent 35%),
+        var(--bg);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      width: min(460px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 9px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
+
+    .panel {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 4px;
+    }
+
+    .panel.active {
+      display: flex;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .primary {
+      border: none;
+      background: var(--brand);
+      color: white;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .primary:hover { background: var(--brand-strong); }
+
+    .secondary {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .forgot-link {
+      font-size: 13px;
+      color: var(--brand);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .forgot-link:hover { text-decoration: underline; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    #status {
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+      white-space: pre-wrap;
+    }
+
+    .status-success { color: var(--success) !important; }
+    .status-error { color: var(--danger) !important; }
+    .helper { font-size: 12px; color: var(--muted); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1 class="title">Welcome back</h1>
+    <p class="subtitle">Sign in to continue structuring your data.</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="login" type="button">Login</button>
+      <button class="tab-btn" data-tab="signup" type="button">Sign Up</button>
+    </div>
+
+    <section id="loginPanel" class="panel active">
+      <label for="loginUser">Email</label>
+      <input id="loginUser" type="email" placeholder="you@example.com" autocomplete="username" />
+      <label for="loginPass">Password</label>
+      <input id="loginPass" type="password" placeholder="Enter password" autocomplete="current-password" />
+      <button id="loginBtn" class="primary" type="button">Login</button>
+      <div class="forgot-link" id="forgotLink">Forgot your password?</div>
+    </section>
+
+    <section id="signupPanel" class="panel">
+      <label for="signupName">Full name</label>
+      <input id="signupName" type="text" placeholder="Jane Doe" autocomplete="name" />
+      <label for="signupEmail">Email</label>
+      <input id="signupEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="signupPass">Password</label>
+      <input id="signupPass" type="password" placeholder="Create password" autocomplete="new-password" />
+      <label for="signupPassConfirm">Confirm password</label>
+      <input id="signupPassConfirm" type="password" placeholder="Retype your password" autocomplete="new-password" />
+      <button id="signupBtn" class="primary" type="button">Create Account</button>
+      <div class="helper">A verification code will be sent to your email.</div>
+    </section>
+
+    <section id="confirmPanel" class="panel">
+      <label for="confirmEmail">Email</label>
+      <input id="confirmEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="confirmCode">Verification code</label>
+      <input id="confirmCode" type="text" placeholder="Enter the code from email" />
+      <div class="row">
+        <button id="confirmBtn" class="primary" type="button">Confirm Account</button>
+        <button id="resendBtn" class="secondary" type="button">Resend Code</button>
+      </div>
+    </section>
+
+    <section id="forgotPanel" class="panel">
+      <label for="forgotEmail">Email</label>
+      <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <button id="forgotBtn" class="primary" type="button">Send Reset Code</button>
+    </section>
+
+    <section id="resetPanel" class="panel">
+      <label for="resetEmail">Email</label>
+      <input id="resetEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="resetCode">Reset code</label>
+      <input id="resetCode" type="text" placeholder="Enter the code from email" />
+      <label for="resetPass">New password</label>
+      <input id="resetPass" type="password" placeholder="Enter your new password" autocomplete="new-password" />
+      <button id="resetBtn" class="primary" type="button">Set New Password</button>
+    </section>
+
+    <div id="status"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.15/dist/amazon-cognito-identity.min.js"></script>
+  <script>
+    const AUTH_CONFIG = {
+      region: "__COGNITO_REGION__",
+      userPoolId: "__COGNITO_USER_POOL_ID__",
+      clientId: "__COGNITO_CLIENT_ID__"
+    };
+
+    const STORAGE_KEYS = {
+      idToken: "app_id_token",
+      accessToken: "app_access_token",
+      refreshToken: "app_refresh_token",
+      username: "app_username",
+      name: "app_name",
+      signedIn: "app_signed_in"
+    };
+
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const panels = {
+      login: document.getElementById("loginPanel"),
+      signup: document.getElementById("signupPanel"),
+      confirm: document.getElementById("confirmPanel"),
+      forgot: document.getElementById("forgotPanel"),
+      reset: document.getElementById("resetPanel")
+    };
+    const status = document.getElementById("status");
+
+    function showStatus(message, type = "info") {
+      status.textContent = message;
+      status.className = "";
+      if (type === "success") status.classList.add("status-success");
+      if (type === "error") status.classList.add("status-error");
+    }
+
+    function ensureConfig() {
+      const values = Object.values(AUTH_CONFIG);
+      const invalid = values.some((value) => !value || value.startsWith("__COGNITO_"));
+      if (invalid) {
+        showStatus("Cognito configuration is missing. Inject region, user pool ID, and client ID during deployment.", "error");
+        return false;
+      }
+      return true;
+    }
+
+    function setTab(tabName) {
+      tabButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabName));
+      Object.entries(panels).forEach(([name, panel]) => panel.classList.toggle("active", name === tabName));
+      showStatus("");
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => setTab(btn.dataset.tab));
+    });
+
+    document.getElementById("forgotLink").addEventListener("click", () => {
+      const email = document.getElementById("loginUser").value.trim();
+      if (email) document.getElementById("forgotEmail").value = email;
+      setTab("forgot");
+    });
+
+    function getUserPool() {
+      return new AmazonCognitoIdentity.CognitoUserPool({
+        UserPoolId: AUTH_CONFIG.userPoolId,
+        ClientId: AUTH_CONFIG.clientId
+      });
+    }
+
+    function getCognitoUser(email) {
+      return new AmazonCognitoIdentity.CognitoUser({
+        Username: email,
+        Pool: getUserPool()
+      });
+    }
+
+    function storeSession(result, username, displayName = "") {
+      localStorage.setItem(STORAGE_KEYS.idToken, result.getIdToken().getJwtToken());
+      localStorage.setItem(STORAGE_KEYS.accessToken, result.getAccessToken().getJwtToken());
+      localStorage.setItem(STORAGE_KEYS.refreshToken, result.getRefreshToken().getToken());
+      localStorage.setItem(STORAGE_KEYS.username, username || "");
+      localStorage.setItem(STORAGE_KEYS.name, displayName || "");
+      localStorage.setItem(STORAGE_KEYS.signedIn, "true");
+    }
+
+    function decodeJwt(token) {
+      try {
+        const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        return JSON.parse(atob(base64));
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function redirectIfAlreadySignedIn() {
+      const idToken = localStorage.getItem(STORAGE_KEYS.idToken);
+      if (!idToken) return;
+      const payload = decodeJwt(idToken);
+      if (payload && payload.exp * 1000 > Date.now()) {
+        window.location.href = "index.html";
+      }
+    }
+
+    redirectIfAlreadySignedIn();
+
+    document.getElementById("signupBtn").addEventListener("click", () => {
+      if (!ensureConfig()) return;
+
+      const name = document.getElementById("signupName").value.trim();
+      const email = document.getElementById("signupEmail").value.trim().toLowerCase();
+      const password = document.getElementById("signupPass").value;
+      const confirmPassword = document.getElementById("signupPassConfirm").value;
+
+      if (!name || !email || !password || !confirmPassword) {
+        showStatus("Fill all Sign Up fields.", "error");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showStatus("Passwords do not match.", "error");
+        return;
+      }
+
+      const attributeList = [
+        new AmazonCognitoIdentity.CognitoUserAttribute({ Name: "email", Value: email }),
+        new AmazonCognitoIdentity.CognitoUserAttribute({ Name: "name", Value: name })
+      ];
+
+      getUserPool().signUp(email, password, attributeList, null, (err) => {
+        if (err) {
+          showStatus(err.message || "Unable to create your account.", "error");
+          return;
+        }
+
+        document.getElementById("confirmEmail").value = email;
+        showStatus("Account created. Enter the verification code sent to your email.", "success");
+        setTab("confirm");
+      });
+    });
+
+    document.getElementById("confirmBtn").addEventListener("click", () => {
+      if (!ensureConfig()) return;
+
+      const email = document.getElementById("confirmEmail").value.trim().toLowerCase();
+      const code = document.getElementById("confirmCode").value.trim();
+
+      if (!email || !code) {
+        showStatus("Enter your email and verification code.", "error");
+        return;
+      }
+
+      getCognitoUser(email).confirmRegistration(code, true, (err) => {
+        if (err) {
+          showStatus(err.message || "Unable to confirm account.", "error");
+          return;
+        }
+
+        document.getElementById("loginUser").value = email;
+        showStatus("Your account is confirmed. You can log in now.", "success");
+        setTab("login");
+      });
+    });
+
+    document.getElementById("resendBtn").addEventListener("click", () => {
+      if (!ensureConfig()) return;
+
+      const email = document.getElementById("confirmEmail").value.trim().toLowerCase();
+      if (!email) {
+        showStatus("Enter your email to resend the code.", "error");
+        return;
+      }
+
+      getCognitoUser(email).resendConfirmationCode((err) => {
+        if (err) {
+          showStatus(err.message || "Unable to resend code.", "error");
+          return;
+        }
+        showStatus("Verification code sent again.", "success");
+      });
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      if (!ensureConfig()) return;
+
+      const username = document.getElementById("loginUser").value.trim().toLowerCase();
+      const password = document.getElementById("loginPass").value;
+      if (!username || !password) {
+        showStatus("Enter email and password.", "error");
+        return;
+      }
+
+      const authenticationData = new AmazonCognitoIdentity.AuthenticationDetails({
+        Username: username,
+        Password: password
+      });
+
+      const cognitoUser = getCognitoUser(username);
+      cognitoUser.authenticateUser(authenticationData, {
+        onSuccess: (result) => {
+          const payload = decodeJwt(result.getIdToken().getJwtToken()) || {};
+          const displayName = payload.name || payload.email || username;
+          storeSession(result, username, displayName);
+          showStatus("Login successful. Redirecting...", "success");
+          window.location.href = "index.html";
+        },
+        onFailure: (err) => {
+          showStatus(err.message || "Login failed.", "error");
+        }
+      });
+    });
+
+    document.getElementById("forgotBtn").addEventListener("click", () => {
+      if (!ensureConfig()) return;
+
+      const email = document.getElementById("forgotEmail").value.trim().toLowerCase();
+      if (!email) {
+        showStatus("Enter your email to continue.", "error");
+        return;
+      }
+
+      getCognitoUser(email).forgotPassword({
+        onSuccess: () => {
+          document.getElementById("resetEmail").value = email;
+          showStatus("Reset code sent. Enter it below with your new password.", "success");
+          setTab("reset");
+        },
+        onFailure: (err) => {
+          showStatus(err.message || "Unable to start password reset.", "error");
+        },
+        inputVerificationCode: () => {
+          document.getElementById("resetEmail").value = email;
+          showStatus("Reset code sent. Enter it below with your new password.", "success");
+          setTab("reset");
+        }
+      });
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!ensureConfig()) return;
+
+      const email = document.getElementById("resetEmail").value.trim().toLowerCase();
+      const code = document.getElementById("resetCode").value.trim();
+      const newPassword = document.getElementById("resetPass").value;
+
+      if (!email || !code || !newPassword) {
+        showStatus("Enter your email, reset code, and new password.", "error");
+        return;
+      }
+
+      getCognitoUser(email).confirmPassword(code, newPassword, {
+        onSuccess: () => {
+          document.getElementById("loginUser").value = email;
+          showStatus("Password updated. You can log in now.", "success");
+          setTab("login");
+        },
+        onFailure: (err) => {
+          showStatus(err.message || "Unable to reset password.", "error");
+        }
+      });
+    });
+  </script>
+</body>
+</html>
