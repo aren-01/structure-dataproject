@@ -18,9 +18,7 @@
       --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -124,22 +122,15 @@
       transition: background 0.2s ease, transform 0.1s ease;
     }
 
-    button:hover:not(:disabled) {
-      background: var(--brand-strong);
-    }
-
-    button:active:not(:disabled) {
-      transform: translateY(1px);
-    }
+    button:hover:not(:disabled) { background: var(--brand-strong); }
+    button:active:not(:disabled) { transform: translateY(1px); }
 
     button:disabled {
       background: #9ca3af;
       cursor: not-allowed;
     }
 
-    #submitBtn {
-      width: 100%;
-    }
+    #submitBtn { width: 100%; }
 
     #logoutBtn {
       width: auto;
@@ -155,9 +146,7 @@
       text-decoration: underline;
     }
 
-    #logoutBtn:active:not(:disabled) {
-      transform: none;
-    }
+    #logoutBtn:active:not(:disabled) { transform: none; }
 
     .sidebar {
       width: 280px;
@@ -171,9 +160,7 @@
       overflow: hidden;
     }
 
-    .sidebar.collapsed {
-      width: 66px;
-    }
+    .sidebar.collapsed { width: 66px; }
 
     .sidebar-head {
       display: flex;
@@ -236,15 +223,28 @@
       border-color: #bfdbfe;
     }
 
-    .history-item:active {
-      transform: scale(0.99);
-    }
+    .history-item:active { transform: scale(0.99); }
 
     .history-item.active {
       background: var(--history-active);
       border-color: #93c5fd;
     }
 
+    .meta-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status {
+      color: var(--muted);
+      min-height: 20px;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
 
     .sidebar.collapsed .sidebar-title,
     .sidebar.collapsed .sidebar-content {
@@ -252,39 +252,35 @@
     }
 
     @media (max-width: 980px) {
-      .main {
-        flex-direction: column;
-      }
-
+      .main { flex-direction: column; }
       .sidebar,
-      .sidebar.collapsed {
-        width: 100%;
-      }
-
+      .sidebar.collapsed { width: 100%; }
       .sidebar.collapsed .sidebar-title,
-      .sidebar.collapsed .sidebar-content {
-        display: block;
-      }
+      .sidebar.collapsed .sidebar-content { display: block; }
     }
   </style>
 </head>
 <body>
-
   <div class="app-shell">
     <header class="topbar">
       <div id="welcomeText" class="welcome">Structure Your Data</div>
       <div class="topbar-right">
-        <div class="tiny-title">Hi there!</div>
-        <span id="logoutBtn" role="link" tabindex="0" style="cursor: pointer;">Logout</span>
+        <div id="sessionInfo" class="tiny-title">Checking session...</div>
+        <button id="logoutBtn" type="button">Logout</button>
       </div>
     </header>
 
     <div class="main">
       <div class="workspace">
         <div class="app-box">
+          <div class="meta-row">
+            <span>Protected API request using your Cognito token</span>
+            <span id="userEmailLabel"></span>
+          </div>
           <textarea id="outputBox" class="box" placeholder="Structured output will appear here..." disabled></textarea>
           <textarea id="inputBox" class="box" placeholder="Type here..."></textarea>
-          <button id="submitBtn">Structure it!</button>
+          <button id="submitBtn" type="button">Structure it!</button>
+          <div id="requestStatus" class="status"></div>
         </div>
       </div>
 
@@ -294,7 +290,6 @@
           <div class="sidebar-title">History</div>
         </div>
         <div class="sidebar-content">
-         
           <ul id="historyList" class="history-list">
             <li class="history-item active">Generate a JSON schema for customer records</li>
             <li class="history-item">Convert meeting notes into structured action items</li>
@@ -304,59 +299,138 @@
     </div>
   </div>
 
-
   <script>
+    const STORAGE_KEYS = {
+      idToken: "app_id_token",
+      accessToken: "app_access_token",
+      refreshToken: "app_refresh_token",
+      username: "app_username",
+      name: "app_name",
+      signedIn: "app_signed_in"
+    };
+
+    const API_URL = "__API_URL__/project-stage/generate";
+
     const historySidebar = document.getElementById("historySidebar");
     const collapseBtn = document.getElementById("collapseBtn");
+    const inputBox = document.getElementById("inputBox");
+    const outputBox = document.getElementById("outputBox");
+    const submitBtn = document.getElementById("submitBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const welcomeText = document.getElementById("welcomeText");
+    const sessionInfo = document.getElementById("sessionInfo");
+    const userEmailLabel = document.getElementById("userEmailLabel");
+    const requestStatus = document.getElementById("requestStatus");
 
     collapseBtn.addEventListener("click", () => {
       const isCollapsed = historySidebar.classList.toggle("collapsed");
       collapseBtn.innerHTML = isCollapsed ? "&lt;" : "&gt;";
       collapseBtn.setAttribute("aria-label", isCollapsed ? "Expand sidebar" : "Collapse sidebar");
     });
-	
-	const API_URL = "__API_URL__/project-stage/generate";
 
-    const inputBox = document.getElementById("inputBox");
-    const outputBox = document.getElementById("outputBox");
-    const submitBtn = document.getElementById("submitBtn");
+    function decodeJwt(token) {
+      try {
+        const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        return JSON.parse(atob(base64));
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function clearSession() {
+      Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+    }
+
+    function getValidIdToken() {
+      const idToken = localStorage.getItem(STORAGE_KEYS.idToken);
+      if (!idToken) return null;
+      const payload = decodeJwt(idToken);
+      if (!payload || !payload.exp || payload.exp * 1000 <= Date.now()) {
+        clearSession();
+        return null;
+      }
+      return idToken;
+    }
+
+    function requireAuth() {
+      const token = getValidIdToken();
+      if (!token) {
+        window.location.href = "login.html";
+        return null;
+      }
+
+      const payload = decodeJwt(token) || {};
+      const displayName = localStorage.getItem(STORAGE_KEYS.name) || payload.name || payload.email || "there";
+      const email = localStorage.getItem(STORAGE_KEYS.username) || payload.email || "";
+
+      welcomeText.textContent = `Welcome, ${displayName}`;
+      sessionInfo.textContent = "Authenticated with Cognito";
+      userEmailLabel.textContent = email;
+      return token;
+    }
+
+    const idToken = requireAuth();
+
+    logoutBtn.addEventListener("click", () => {
+      clearSession();
+      window.location.href = "login.html";
+    });
 
     submitBtn.addEventListener("click", async () => {
       const prompt = inputBox.value.trim();
 
       if (!prompt) {
         outputBox.value = "Please enter some text.";
+        requestStatus.textContent = "";
+        return;
+      }
+
+      const currentToken = getValidIdToken();
+      if (!currentToken) {
+        window.location.href = "login.html";
         return;
       }
 
       submitBtn.disabled = true;
       outputBox.value = "Processing...";
+      requestStatus.textContent = "Sending authorized request...";
 
       try {
         const res = await fetch(API_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentToken}`
           },
           body: JSON.stringify({ prompt })
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            clearSession();
+            requestStatus.textContent = "Your session is no longer valid. Please log in again.";
+            setTimeout(() => {
+              window.location.href = "login.html";
+            }, 800);
+            return;
+          }
+
           outputBox.value = JSON.stringify(data, null, 2);
+          requestStatus.textContent = `Request failed with status ${res.status}.`;
           return;
         }
 
-        outputBox.value = JSON.stringify(data.output, null, 2);
-
+        outputBox.value = JSON.stringify(data.output ?? data, null, 2);
+        requestStatus.textContent = "Done.";
       } catch (error) {
         outputBox.value = "Error! " + error.message;
+        requestStatus.textContent = "Unable to reach the API.";
       } finally {
         submitBtn.disabled = false;
       }
     });
   </script>
-
 </body>
 </html>
