@@ -321,42 +321,49 @@
     const outputBox = document.getElementById("outputBox");
     const submitBtn = document.getElementById("submitBtn");
 
-    submitBtn.addEventListener("click", async () => {
-      const prompt = inputBox.value.trim();
+submitBtn.addEventListener("click", async () => {
+  const prompt = inputBox.value.trim();
+  const idToken = localStorage.getItem("app_id_token");
 
-      if (!prompt) {
-        outputBox.value = "Please enter some text.";
-        return;
-      }
+  if (!prompt) {
+    outputBox.value = "Please enter some text.";
+    return;
+  }
 
-      submitBtn.disabled = true;
-      outputBox.value = "Processing...";
+  if (!idToken) {
+    outputBox.value = "You are not logged in.";
+    window.location.href = "login.html";
+    return;
+  }
 
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-			"Authorization": `Bearer ${idToken}`
-          },
-          body: JSON.stringify({ prompt })
-        });
+  submitBtn.disabled = true;
+  outputBox.value = "Processing...";
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          outputBox.value = JSON.stringify(data, null, 2);
-          return;
-        }
-
-        outputBox.value = JSON.stringify(data.output, null, 2);
-
-      } catch (error) {
-        outputBox.value = "Error! " + error.message;
-      } finally {
-        submitBtn.disabled = false;
-      }
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`
+      },
+      body: JSON.stringify({ prompt })
     });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      outputBox.value = JSON.stringify(data, null, 2);
+      return;
+    }
+
+    outputBox.value = JSON.stringify(data.output, null, 2);
+
+  } catch (error) {
+    outputBox.value = "Error! " + error.message;
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
   </script>
 
 </body>
