@@ -24,7 +24,7 @@ variable "aws_region" {
 }
 
 variable "bucket_name" {
-  description = "Name for the public S3 bucket"
+  description = "Name for the S3 bucket"
   type        = string
 }
 
@@ -32,44 +32,31 @@ resource "aws_s3_bucket" "website_bucket" {
   bucket = var.bucket_name
 }
 
-resource "aws_s3_bucket_website_configuration" "website_config" {
+resource "aws_s3_bucket_public_access_block" "website_bucket" {
   bucket = aws_s3_bucket.website_bucket.id
 
-  index_document {
-    suffix = "index.html"
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "website_bucket" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "public_access" {
+resource "aws_s3_bucket_server_side_encryption_configuration" "website_bucket" {
   bucket = aws_s3_bucket.website_bucket.id
 
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_policy" "public_read_policy" {
-  bucket = aws_s3_bucket.website_bucket.id
-
-  depends_on = [
-    aws_s3_bucket_public_access_block.public_access
-  ]
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "PublicReadGetObject"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = [
-          "s3:GetObject"
-        ]
-        Resource = "${aws_s3_bucket.website_bucket.arn}/*"
-      }
-    ]
-  })
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
 }
 
 resource "aws_dynamodb_table" "structured_table" {
@@ -134,7 +121,7 @@ data "archive_file" "lambda_zip" {
   output_path = "${path.module}/structured_function.zip"
 
   source {
-    filename = "lambda_function.py"
+    filename = "structured_dataproject.py"
     content  = <<-PYTHON
       def lambda_handler(event, context):
           return {
@@ -161,9 +148,6 @@ resource "aws_lambda_function" "structured_function" {
   }
 }
 
-# -----------------------------
-# Cognito User Pool for SPA login
-# -----------------------------
 resource "aws_cognito_user_pool" "structured_user_pool" {
   name = "structured-dataproject-pool01"
 
@@ -228,9 +212,6 @@ resource "aws_cognito_user_pool_client" "structured_spa_client" {
   ]
 }
 
-# -----------------------------
-# HTTP API
-# -----------------------------
 resource "aws_apigatewayv2_api" "http_api" {
   name            = "structured_dataproject"
   protocol_type   = "HTTP"
@@ -243,7 +224,6 @@ resource "aws_apigatewayv2_api" "http_api" {
   }
 }
 
-# JWT authorizer using Cognito
 resource "aws_apigatewayv2_authorizer" "cognito_authorizer" {
   api_id          = aws_apigatewayv2_api.http_api.id
   name            = "structured-cognito-authorizer"
@@ -267,7 +247,6 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
   payload_format_version = "2.0"
 }
 
-# Protected route
 resource "aws_apigatewayv2_route" "post_generate" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "POST /generate"
@@ -291,8 +270,143 @@ resource "aws_apigatewayv2_stage" "project_stage" {
   auto_deploy = true
 }
 
-output "s3_website_url" {
-  value = aws_s3_bucket_website_configuration.website_config.website_endpoint
+resource "aws_cloudfront_origin_access_control" "s3_oac" {
+  name                              = "structured-dataproject-s3-oac"
+  description                       = "OAC for structured-dataproject S3 origin"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_function" "remove_file_extensions" {
+  name    = "remove-file-extensions"
+  runtime = "cloudfront-js-2.0"
+  comment = "Rewrite clean URLs to HTML files"
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+        var request = event.request;
+        var uri = request.uri;
+
+        // Home page
+        if (uri === "/") {
+            request.uri = "/index.html";
+        }
+        // Login page
+        else if (uri === "/login") {
+            request.uri = "/login.html";
+        }
+
+        return request;
+    }
+  JS
+}
+
+resource "aws_cloudfront_cache_policy" "optimized" {
+  name        = "structured-dataproject-cache-policy"
+  comment     = "Recommended cache policy for static website"
+  default_ttl = 86400
+  max_ttl     = 31536000
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+  }
+}
+
+resource "aws_cloudfront_distribution" "structured_dataproject" {
+  enabled             = true
+  comment             = "structured-dataproject"
+  default_root_object = "index.html"
+  price_class         = "PriceClass_All"
+
+  origin {
+    domain_name              = aws_s3_bucket.website_bucket.bucket_regional_domain_name
+    origin_id                = "structured-dataproject-s3-origin"
+    origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "structured-dataproject-s3-origin"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS"]
+    cached_methods  = ["GET", "HEAD"]
+
+    cache_policy_id = aws_cloudfront_cache_policy.optimized.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.remove_file_extensions.arn
+    }
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  depends_on = [
+    aws_cloudfront_function.remove_file_extensions
+  ]
+}
+
+data "aws_iam_policy_document" "website_bucket_policy" {
+  statement {
+    sid    = "AllowCloudFrontServicePrincipalReadOnly"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.website_bucket.arn}/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.structured_dataproject.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "website_bucket_policy" {
+  bucket = aws_s3_bucket.website_bucket.id
+  policy = data.aws_iam_policy_document.website_bucket_policy.json
+}
+
+output "cloudfront_distribution_id" {
+  value = aws_cloudfront_distribution.structured_dataproject.id
+}
+
+output "cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.structured_dataproject.domain_name
 }
 
 output "api_url" {
@@ -315,7 +429,10 @@ output "cognito_user_pool_client_id" {
   value = aws_cognito_user_pool_client.structured_spa_client.id
 }
 
-
 output "cognito_region" {
   value = var.aws_region
+}
+
+output "bucket_name" {
+  value = aws_s3_bucket.website_bucket.id
 }
