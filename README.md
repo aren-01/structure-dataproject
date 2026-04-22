@@ -65,4 +65,5 @@ file.
 
 Improvements
 + Added sign up and user management feature using Cognito
++ Utilized Cloudfront 
  
