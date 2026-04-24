@@ -322,7 +322,7 @@
       if (!idToken) return;
       const payload = decodeJwt(idToken);
       if (payload && payload.exp * 1000 > Date.now()) {
-        window.location.href = "index.html";
+        window.location.href = "/";
       }
     }
 
@@ -426,7 +426,7 @@
           const displayName = payload.name || payload.email || username;
           storeSession(result, username, displayName);
           showStatus("Login successful. Redirecting...", "success");
-          window.location.href = "index.html";
+          window.location.href = "/";
         },
         onFailure: (err) => {
           showStatus(err.message || "Login failed.", "error");
