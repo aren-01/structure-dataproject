@@ -138,7 +138,7 @@ resource "aws_iam_role_policy" "dynamodb_access" {
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/structured_dataproject.py"
+  source_file = "${path.module}/lambda-function/structured_dataproject.py"
   output_path = "${path.module}/structured_function.zip"
 }
 
