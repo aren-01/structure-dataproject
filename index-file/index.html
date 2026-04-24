@@ -431,7 +431,8 @@
           return;
         }
 
-        outputBox.value = JSON.stringify(data.item.output, null, 2);
+        outputBox.value = JSON.stringify(data.item, null, 2);
+        latestOutput = data.item;
         await loadSavedItems();
 
       } catch (error) {
@@ -472,36 +473,46 @@
       }
     }
 
-    function renderSavedItems(items) {
-      historyList.innerHTML = "";
+function renderSavedItems(items) {
+  historyList.innerHTML = "";
 
-      if (!items.length) {
-        historyList.innerHTML = `<li class="history-item">No saved items yet.</li>`;
-        return;
-      }
+  if (!items.length) {
+    historyList.innerHTML = `<li class="history-item">No saved items yet.</li>`;
+    return;
+  }
 
-      items.forEach((item) => {
-        const li = document.createElement("li");
-        li.className = "history-item";
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "history-item";
 
-        const output = item.output || {};
-        const label = output.name || output.title || output.major || item.id || "Saved item";
-        const date = item.createdAt ? new Date(item.createdAt).toLocaleString() : "";
+    const displayItem = { ...item };
+    delete displayItem.userId;
 
-        li.textContent = date ? `${label} — ${date}` : label;
-        li.title = JSON.stringify(output, null, 2);
+    const label =
+      displayItem.name ||
+      displayItem.title ||
+      displayItem.major ||
+      displayItem.id ||
+      "Saved item";
 
-        li.addEventListener("click", () => {
-          document.querySelectorAll(".history-item").forEach((el) => el.classList.remove("active"));
-          li.classList.add("active");
-          latestOutput = output;
-          outputBox.value = JSON.stringify(output, null, 2);
-          saveBtn.disabled = false;
-        });
+    li.textContent = label;
+    li.title = JSON.stringify(displayItem, null, 2);
 
-        historyList.appendChild(li);
+    li.addEventListener("click", () => {
+      document.querySelectorAll(".history-item").forEach((el) => {
+        el.classList.remove("active");
       });
-    }
+
+      li.classList.add("active");
+
+      latestOutput = displayItem;
+      outputBox.value = JSON.stringify(displayItem, null, 2);
+      saveBtn.disabled = false;
+    });
+
+    historyList.appendChild(li);
+  });
+}
 
     loadSavedItems();
   </script>
