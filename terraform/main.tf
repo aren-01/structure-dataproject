@@ -62,7 +62,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "website_bucket" {
 resource "aws_dynamodb_table" "structured_table" {
   name         = "structured_dataproject"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
+  hash_key     = "userId"
+  range_key    = "id"
+
+  attribute {
+    name = "userId"
+    type = "S"
+  }
 
   attribute {
     name = "id"
@@ -111,25 +117,29 @@ resource "aws_iam_role_policy" "bedrock_access" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "dynamodb_full_access" {
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+resource "aws_iam_role_policy" "dynamodb_access" {
+  name = "structured-function-dynamodb-access"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:Query"
+        ]
+        Resource = aws_dynamodb_table.structured_table.arn
+      }
+    ]
+  })
 }
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
+  source_file = "${path.module}/structured_dataproject.py"
   output_path = "${path.module}/structured_function.zip"
-
-  source {
-    filename = "structured_dataproject.py"
-    content  = <<-PYTHON
-      def lambda_handler(event, context):
-          return {
-              "statusCode": 200,
-              "body": "Replace this Lambda code later"
-          }
-    PYTHON
-  }
 }
 
 resource "aws_lambda_function" "structured_function" {
@@ -219,7 +229,7 @@ resource "aws_apigatewayv2_api" "http_api" {
 
   cors_configuration {
     allow_origins = ["*"]
-    allow_methods = ["POST", "OPTIONS"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
   }
 }
@@ -250,6 +260,24 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
 resource "aws_apigatewayv2_route" "post_generate" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "POST /generate"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
+}
+
+resource "aws_apigatewayv2_route" "post_save" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /save"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
+}
+
+resource "aws_apigatewayv2_route" "get_saved" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /saved"
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 
   authorization_type = "JWT"
