@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+<link rel="stylesheet" href="login-style.css">
+</head>
+<body>
+  <main class="card">
+    <h1 class="title">Welcome back</h1>
+    <p class="subtitle">Sign in to continue structuring your data.</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="login" type="button">Login</button>
+      <button class="tab-btn" data-tab="signup" type="button">Sign Up</button>
+    </div>
+
+    <section id="loginPanel" class="panel active">
+      <label for="loginUser">Email</label>
+      <input id="loginUser" type="email" placeholder="you@example.com" autocomplete="username" />
+      <label for="loginPass">Password</label>
+      <input id="loginPass" type="password" placeholder="Enter password" autocomplete="current-password" />
+      <button id="loginBtn" class="primary" type="button">Login</button>
+      <div class="forgot-link" id="forgotLink">Forgot your password?</div>
+    </section>
+
+    <section id="signupPanel" class="panel">
+      <label for="signupName">Full name</label>
+      <input id="signupName" type="text" placeholder="Jane Doe" autocomplete="name" />
+      <label for="signupEmail">Email</label>
+      <input id="signupEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="signupPass">Password</label>
+      <input id="signupPass" type="password" placeholder="Create password" autocomplete="new-password" />
+      <label for="signupPassConfirm">Confirm password</label>
+      <input id="signupPassConfirm" type="password" placeholder="Retype your password" autocomplete="new-password" />
+      <button id="signupBtn" class="primary" type="button">Create Account</button>
+      <div class="helper">A verification code will be sent to your email.</div>
+    </section>
+
+    <section id="confirmPanel" class="panel">
+      <label for="confirmEmail">Email</label>
+      <input id="confirmEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="confirmCode">Verification code</label>
+      <input id="confirmCode" type="text" placeholder="Enter the code from email" />
+      <div class="row">
+        <button id="confirmBtn" class="primary" type="button">Confirm Account</button>
+        <button id="resendBtn" class="secondary" type="button">Resend Code</button>
+      </div>
+    </section>
+
+    <section id="forgotPanel" class="panel">
+      <label for="forgotEmail">Email</label>
+      <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <button id="forgotBtn" class="primary" type="button">Send Reset Code</button>
+    </section>
+
+    <section id="resetPanel" class="panel">
+      <label for="resetEmail">Email</label>
+      <input id="resetEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="resetCode">Reset code</label>
+      <input id="resetCode" type="text" placeholder="Enter the code from email" />
+      <label for="resetPass">New password</label>
+      <input id="resetPass" type="password" placeholder="Enter your new password" autocomplete="new-password" />
+      <button id="resetBtn" class="primary" type="button">Set New Password</button>
+    </section>
+
+    <div id="status"></div>
+  </main>
+<script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.15/dist/amazon-cognito-identity.min.js"></script>
+<script src="login.js"></script>
+
+
+</body>
+</html>
