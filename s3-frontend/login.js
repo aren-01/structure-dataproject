@@ -5,6 +5,7 @@
       clientId: "__COGNITO_CLIENT_ID__"
     };
 // https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javascriptv3/example_code/cross-services/textract-react/src/index.js
+// https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-integrating-user-pools-with-identity-pools.html
 
     const STORAGE_KEYS = {
       idToken: "app_id_token",
