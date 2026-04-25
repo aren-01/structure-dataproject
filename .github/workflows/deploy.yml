@@ -42,32 +42,32 @@ jobs:
       - name: Inject runtime config into JS
       # These will automatically change placeholders with URLs coming from AWS
         run: |
-            cp index-file/index.js index-file/index.tmp.js
-            cp index-file/login.js index-file/login.tmp.js
+            cp s3-frontend/index.js s3-frontend/index.tmp.js
+            cp s3-frontend/login.js s3-frontend/login.tmp.js
 
-            sed -i "s|__API_URL__|$API_URL|g" index-file/index.tmp.js
-            sed -i "s|__COGNITO_REGION__|$COGNITO_REGION|g" index-file/login.tmp.js
-            sed -i "s|__COGNITO_USER_POOL_ID__|$COGNITO_USER_POOL_ID|g" index-file/login.tmp.js
-            sed -i "s|__COGNITO_CLIENT_ID__|$COGNITO_CLIENT_ID|g" index-file/login.tmp.js
+            sed -i "s|__API_URL__|$API_URL|g" s3-frontend/index.tmp.js
+            sed -i "s|__COGNITO_REGION__|$COGNITO_REGION|g" s3-frontend/login.tmp.js
+            sed -i "s|__COGNITO_USER_POOL_ID__|$COGNITO_USER_POOL_ID|g" s3-frontend/login.tmp.js
+            sed -i "s|__COGNITO_CLIENT_ID__|$COGNITO_CLIENT_ID|g" s3-frontend/login.tmp.js
 
       - name: Upload static frontend files to S3
         run: |
-            aws s3 cp index-file/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
+            aws s3 cp s3-frontend/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
             --content-type text/html
             
-            aws s3 cp index-file/login.html s3://${{ secrets.S3_BUCKET_NAME }}/login.html \
+            aws s3 cp s3-frontend/login.html s3://${{ secrets.S3_BUCKET_NAME }}/login.html \
             --content-type text/html
             
-            aws s3 cp index-file/project-style.css s3://${{ secrets.S3_BUCKET_NAME }}/project-style.css \
+            aws s3 cp s3-frontend/project-style.css s3://${{ secrets.S3_BUCKET_NAME }}/project-style.css \
             --content-type text/css
             
-            aws s3 cp index-file/login-style.css s3://${{ secrets.S3_BUCKET_NAME }}/login-style.css \
+            aws s3 cp s3-frontend/login-style.css s3://${{ secrets.S3_BUCKET_NAME }}/login-style.css \
             --content-type text/css
             
-            aws s3 cp index-file/index.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/index.js \
+            aws s3 cp s3-frontend/index.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/index.js \
             --content-type application/javascript
             
-            aws s3 cp index-file/login.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/login.js \
+            aws s3 cp s3-frontend/login.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/login.js \
             --content-type application/javascript
 
       - name: Zip the Lambda function first
