@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Structure Your Data!</title>
+<link rel="stylesheet" href="project-style.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div id="welcomeText" class="welcome">Structure Your Data</div>
+      <div class="topbar-right">
+        <div class="tiny-title">Hi there!</div>
+        <span id="logoutBtn" role="link" tabindex="0" style="cursor: pointer;">Logout</span>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="workspace">
+        <div class="app-box">
+          <textarea id="outputBox" class="box" placeholder="Structured output will appear here..." disabled></textarea>
+          <textarea id="inputBox" class="box" placeholder="Type here..."></textarea>
+          <div class="button-row">
+            <button id="submitBtn">Structure it!</button>
+            <button id="saveBtn" disabled>Save</button>
+          </div>
+        </div>
+      </div>
+
+      <aside id="historySidebar" class="sidebar">
+        <div class="sidebar-head">
+          <button id="collapseBtn" class="collapse-btn" aria-label="Collapse sidebar">&gt;</button>
+          <div class="sidebar-title">History</div>
+        </div>
+        <div class="sidebar-content">
+         
+          <ul id="historyList" class="history-list">
+            <li class="history-item">Saved items will appear here after login.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+
+<script src="index.js"></script>
+
+</body>
+</html>
