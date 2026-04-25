@@ -8,6 +8,7 @@
       collapseBtn.setAttribute("aria-label", isCollapsed ? "Expand sidebar" : "Collapse sidebar");
     });
 
+// placeholders will be automatically replaced with API Gateway URL by GitHub Actions 
     const API_BASE_URL = "__API_URL__/project-stage";
     const GENERATE_URL = `${API_BASE_URL}/generate`;
     const SAVE_URL = `${API_BASE_URL}/save`;
@@ -36,6 +37,7 @@
       return idToken;
     }
 
+// check login.js 
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("app_id_token");
       window.location.href = "login";
