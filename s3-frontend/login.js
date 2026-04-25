@@ -4,6 +4,7 @@
       userPoolId: "__COGNITO_USER_POOL_ID__",
       clientId: "__COGNITO_CLIENT_ID__"
     };
+// https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javascriptv3/example_code/cross-services/textract-react/src/index.js
 
     const STORAGE_KEYS = {
       idToken: "app_id_token",
