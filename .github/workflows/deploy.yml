@@ -3,6 +3,14 @@ name: Structure Data Project
 on:
   workflow_dispatch:
 
+concurrency:
+  group: terraform-structure-data-project
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TF_STATE_BUCKET: structured-dataproject-tfstate-${{ github.repository_owner }}-${{ github.event.repository.name }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,19 +25,62 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: Create Terraform state bucket if it does not exist
+        run: |
+          BUCKET_NAME=$(echo "${TF_STATE_BUCKET}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+
+          echo "Using Terraform state bucket: $BUCKET_NAME"
+          echo "TF_STATE_BUCKET_FINAL=$BUCKET_NAME" >> $GITHUB_ENV
+
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Terraform state bucket already exists."
+          else
+            echo "Creating Terraform state bucket..."
+
+            aws s3api create-bucket \
+              --bucket "$BUCKET_NAME" \
+              --region "${AWS_REGION}"
+
+            aws s3api put-bucket-versioning \
+              --bucket "$BUCKET_NAME" \
+              --versioning-configuration Status=Enabled
+
+            aws s3api put-public-access-block \
+              --bucket "$BUCKET_NAME" \
+              --public-access-block-configuration \
+              BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+            aws s3api put-bucket-encryption \
+              --bucket "$BUCKET_NAME" \
+              --server-side-encryption-configuration '{
+                "Rules": [
+                  {
+                    "ApplyServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }'
+          fi
+
       - name: Terraform Init
         working-directory: ./terraform
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET_FINAL }}" \
+            -backend-config="key=structured-dataproject/prod/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="use_lockfile=true"
 
       - name: Terraform Apply
         working-directory: ./terraform
         run: |
           terraform apply -auto-approve \
-          -var="bucket_name=${{ secrets.S3_BUCKET_NAME }}"
+            -var="bucket_name=${{ secrets.S3_BUCKET_NAME }}"
 
       - name: Get deployment outputs
         working-directory: ./terraform
@@ -40,34 +91,33 @@ jobs:
           echo "COGNITO_CLIENT_ID=$(terraform output -raw cognito_user_pool_client_id)" >> $GITHUB_ENV
 
       - name: Inject runtime config into JS
-      # These will automatically change placeholders with URLs coming from AWS
         run: |
-            cp s3-frontend/index.js s3-frontend/index.tmp.js
-            cp s3-frontend/login.js s3-frontend/login.tmp.js
+          cp s3-frontend/index.js s3-frontend/index.tmp.js
+          cp s3-frontend/login.js s3-frontend/login.tmp.js
 
-            sed -i "s|__API_URL__|$API_URL|g" s3-frontend/index.tmp.js
-            sed -i "s|__COGNITO_REGION__|$COGNITO_REGION|g" s3-frontend/login.tmp.js
-            sed -i "s|__COGNITO_USER_POOL_ID__|$COGNITO_USER_POOL_ID|g" s3-frontend/login.tmp.js
-            sed -i "s|__COGNITO_CLIENT_ID__|$COGNITO_CLIENT_ID|g" s3-frontend/login.tmp.js
+          sed -i "s|__API_URL__|$API_URL|g" s3-frontend/index.tmp.js
+          sed -i "s|__COGNITO_REGION__|$COGNITO_REGION|g" s3-frontend/login.tmp.js
+          sed -i "s|__COGNITO_USER_POOL_ID__|$COGNITO_USER_POOL_ID|g" s3-frontend/login.tmp.js
+          sed -i "s|__COGNITO_CLIENT_ID__|$COGNITO_CLIENT_ID|g" s3-frontend/login.tmp.js
 
       - name: Upload static frontend files to S3
         run: |
-            aws s3 cp s3-frontend/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
+          aws s3 cp s3-frontend/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html \
             --content-type text/html
-            
-            aws s3 cp s3-frontend/login.html s3://${{ secrets.S3_BUCKET_NAME }}/login.html \
+
+          aws s3 cp s3-frontend/login.html s3://${{ secrets.S3_BUCKET_NAME }}/login.html \
             --content-type text/html
-            
-            aws s3 cp s3-frontend/project-style.css s3://${{ secrets.S3_BUCKET_NAME }}/project-style.css \
+
+          aws s3 cp s3-frontend/project-style.css s3://${{ secrets.S3_BUCKET_NAME }}/project-style.css \
             --content-type text/css
-            
-            aws s3 cp s3-frontend/login-style.css s3://${{ secrets.S3_BUCKET_NAME }}/login-style.css \
+
+          aws s3 cp s3-frontend/login-style.css s3://${{ secrets.S3_BUCKET_NAME }}/login-style.css \
             --content-type text/css
-            
-            aws s3 cp s3-frontend/index.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/index.js \
+
+          aws s3 cp s3-frontend/index.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/index.js \
             --content-type application/javascript
-            
-            aws s3 cp s3-frontend/login.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/login.js \
+
+          aws s3 cp s3-frontend/login.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/login.js \
             --content-type application/javascript
 
       - name: Zip the Lambda function first
