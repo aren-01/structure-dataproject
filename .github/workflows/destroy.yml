@@ -6,6 +6,10 @@ on:
 env:
   AWS_REGION: us-east-1
 
+concurrency:
+  group: terraform-structure-data-project
+  cancel-in-progress: false
+
 jobs:
   destroy:
     runs-on: ubuntu-latest
@@ -26,11 +30,17 @@ jobs:
 
       - name: Recreate state bucket name
         run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
           REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
-          BUCKET_NAME="structured-dataproject-tfstate-${AWS_ACCOUNT_ID}-${REPO_NAME}"
 
+          BUCKET_NAME="structured-dataproject-tfstate-${REPO_OWNER}-${REPO_NAME}"
+
+          echo "Using Terraform state bucket: $BUCKET_NAME"
           echo "TF_STATE_BUCKET_FINAL=$BUCKET_NAME" >> $GITHUB_ENV
+
+      - name: Check Terraform state bucket exists
+        run: |
+          aws s3api head-bucket --bucket "${{ env.TF_STATE_BUCKET_FINAL }}"
 
       - name: Terraform Init
         working-directory: ./terraform
