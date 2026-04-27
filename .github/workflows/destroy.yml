@@ -51,6 +51,10 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="use_lockfile=true"
 
+      - name: Empty the S3 Bucket to Destroy
+        run: |
+          aws s3 rb s3://${{ secrets.S3_BUCKET_NAME }} --force      
+
       - name: Terraform Destroy
         working-directory: ./terraform
         run: |
