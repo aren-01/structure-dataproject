@@ -51,9 +51,20 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="use_lockfile=true"
 
-      - name: Empty the S3 Bucket to Destroy
+      - name: Empty Versioned Bucket
         run: |
-          aws s3 rb s3://${{ secrets.S3_BUCKET_NAME }} --force      
+          versions=$(aws s3api list-object-versions --bucket ${{ secrets.S3_BUCKET_NAME }} --output json --query 'Versions[].{Key:Key,VersionId:VersionId}')
+          if [ "$versions" != "null" ]; then
+            aws s3api delete-objects --bucket ${{ secrets.S3_BUCKET_NAME }} --delete "Objects=$versions"
+          fi
+
+         
+          markers=$(aws s3api list-object-versions --bucket ${{ secrets.S3_BUCKET_NAME }} --output json --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}')
+          if [ "$markers" != "null" ]; then
+            aws s3api delete-objects --bucket ${{ secrets.S3_BUCKET_NAME }} --delete "Objects=$markers"
+          fi
+
+           
 
       - name: Terraform Destroy
         working-directory: ./terraform
