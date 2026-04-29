@@ -1,6 +1,6 @@
 # Structure Your Data!
 
-<img src="images/media/image1.jpg" />
+<img src="images/media/image-1.jpg" />
 
 This is the cloud system I designed to structure data with the help of
 Bedrock and Amazon Nova Micro LLM in an AWS free tier account. This 
