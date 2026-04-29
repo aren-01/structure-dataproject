@@ -3,7 +3,7 @@
 <img src="images/media/image1.jpg" />
 
 This is the cloud system I designed to structure data with the help of
-Bedrock and Amazon Nova Micro LLM in an AWS free tier account. This
+Bedrock and Amazon Nova Micro LLM in an AWS free tier account. This 
 simple system converts user inputs into JSON format, displays it on the
 web interface, and writes the data into DynamoDB. The objective of this
 system is to create a basis for the daily business tasks when
