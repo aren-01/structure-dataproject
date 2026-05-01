@@ -3,6 +3,10 @@ name: Remove the project in the cloud
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_REGION: us-east-1
 
@@ -25,15 +29,13 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
       - name: Recreate state bucket name
         run: |
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
-          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
 
-          BUCKET_NAME="structured-dataproject-tfstate-${REPO_OWNER}-${REPO_NAME}"
+          BUCKET_NAME="structured-dataproject-tfstate-${REPO_OWNER}"
 
           echo "Using Terraform state bucket: $BUCKET_NAME"
           echo "TF_STATE_BUCKET_FINAL=$BUCKET_NAME" >> $GITHUB_ENV
@@ -51,28 +53,36 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="use_lockfile=true"
 
-      - name: Empty S3
+      - name: Empty project S3 bucket
         run: |
           BUCKET="${{ secrets.S3_BUCKET_NAME }}"
-          
-         
-          VERSIONS=$(aws s3api list-object-versions --bucket "$BUCKET" --query 'Versions[].{Key:Key,VersionId:VersionId}')
-          if [ "$VERSIONS" != "null" ] && [ -n "$VERSIONS" ]; then
-            # Format as proper JSON and save to a file
-            echo "{\"Objects\": $VERSIONS}" > delete-versions.json
-            aws s3api delete-objects --bucket "$BUCKET" --delete file://delete-versions.json
+
+          echo "Emptying project S3 bucket: $BUCKET"
+
+          VERSIONS=$(aws s3api list-object-versions \
+            --bucket "$BUCKET" \
+            --query 'Versions[].{Key:Key,VersionId:VersionId}' \
+            --output json)
+
+          if [ "$VERSIONS" != "null" ] && [ "$VERSIONS" != "[]" ]; then
+            echo "{\"Objects\": $VERSIONS}" > delete-project-versions.json
+            aws s3api delete-objects \
+              --bucket "$BUCKET" \
+              --delete file://delete-project-versions.json
           fi
 
-         
-          MARKERS=$(aws s3api list-object-versions --bucket "$BUCKET" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}')
-          if [ "$MARKERS" != "null" ] && [ -n "$MARKERS" ]; then
-            # Format as proper JSON and save to a file
-            echo "{\"Objects\": $MARKERS}" > delete-markers.json
-            aws s3api delete-objects --bucket "$BUCKET" --delete file://delete-markers.json
+          MARKERS=$(aws s3api list-object-versions \
+            --bucket "$BUCKET" \
+            --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
+            --output json)
+
+          if [ "$MARKERS" != "null" ] && [ "$MARKERS" != "[]" ]; then
+            echo "{\"Objects\": $MARKERS}" > delete-project-markers.json
+            aws s3api delete-objects \
+              --bucket "$BUCKET" \
+              --delete file://delete-project-markers.json
           fi
-          
-          
-           
+
       - name: Terraform Destroy
         working-directory: ./terraform
         run: |
@@ -92,10 +102,10 @@ jobs:
             --output json)
 
           if [ "$VERSIONS" != "null" ] && [ "$VERSIONS" != "[]" ]; then
-            echo "{\"Objects\": $VERSIONS}" > delete-versions.json
+            echo "{\"Objects\": $VERSIONS}" > delete-state-versions.json
             aws s3api delete-objects \
               --bucket "$BUCKET" \
-              --delete file://delete-versions.json
+              --delete file://delete-state-versions.json
           fi
 
           MARKERS=$(aws s3api list-object-versions \
@@ -104,10 +114,10 @@ jobs:
             --output json)
 
           if [ "$MARKERS" != "null" ] && [ "$MARKERS" != "[]" ]; then
-            echo "{\"Objects\": $MARKERS}" > delete-markers.json
+            echo "{\"Objects\": $MARKERS}" > delete-state-markers.json
             aws s3api delete-objects \
               --bucket "$BUCKET" \
-              --delete file://delete-markers.json
+              --delete file://delete-state-markers.json
           fi
 
       - name: Delete Terraform state bucket
