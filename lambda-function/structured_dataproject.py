@@ -81,9 +81,6 @@ def generate_handler(event, context, user_id):
 
     item = convert_numbers(item)
 
-    # Important:
-    # Do NOT save here.
-    # The Save button will call /save separately.
 
     return response(200, {"output": item})
 
