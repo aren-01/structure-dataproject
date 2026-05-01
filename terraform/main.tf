@@ -134,7 +134,8 @@ resource "aws_iam_role_policy" "dynamodb_access" {
         Effect = "Allow"
         Action = [
           "dynamodb:PutItem",
-          "dynamodb:Query"
+          "dynamodb:Query",
+          "dynamodb:DeleteItem"
         ]
         Resource = aws_dynamodb_table.structured_table.arn
       }
@@ -284,6 +285,24 @@ resource "aws_apigatewayv2_route" "post_save" {
 resource "aws_apigatewayv2_route" "get_saved" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "GET /saved"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
+}
+
+resource "aws_apigatewayv2_route" "post_delete" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /delete"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
+}
+
+resource "aws_apigatewayv2_route" "get_download" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /download"
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 
   authorization_type = "JWT"
