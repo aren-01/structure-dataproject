@@ -73,9 +73,50 @@ jobs:
           
           
            
-
       - name: Terraform Destroy
         working-directory: ./terraform
         run: |
           terraform destroy -auto-approve \
             -var="bucket_name=${{ secrets.S3_BUCKET_NAME }}"
+
+      - name: Empty Terraform state bucket
+        if: success()
+        run: |
+          BUCKET="${{ env.TF_STATE_BUCKET_FINAL }}"
+
+          echo "Emptying Terraform state bucket: $BUCKET"
+
+          VERSIONS=$(aws s3api list-object-versions \
+            --bucket "$BUCKET" \
+            --query 'Versions[].{Key:Key,VersionId:VersionId}' \
+            --output json)
+
+          if [ "$VERSIONS" != "null" ] && [ "$VERSIONS" != "[]" ]; then
+            echo "{\"Objects\": $VERSIONS}" > delete-versions.json
+            aws s3api delete-objects \
+              --bucket "$BUCKET" \
+              --delete file://delete-versions.json
+          fi
+
+          MARKERS=$(aws s3api list-object-versions \
+            --bucket "$BUCKET" \
+            --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
+            --output json)
+
+          if [ "$MARKERS" != "null" ] && [ "$MARKERS" != "[]" ]; then
+            echo "{\"Objects\": $MARKERS}" > delete-markers.json
+            aws s3api delete-objects \
+              --bucket "$BUCKET" \
+              --delete file://delete-markers.json
+          fi
+
+      - name: Delete Terraform state bucket
+        if: success()
+        run: |
+          BUCKET="${{ env.TF_STATE_BUCKET_FINAL }}"
+
+          echo "Deleting Terraform state bucket: $BUCKET"
+
+          aws s3api delete-bucket \
+            --bucket "$BUCKET" \
+            --region "${{ env.AWS_REGION }}"
