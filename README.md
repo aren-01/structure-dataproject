@@ -58,12 +58,14 @@ Please note that all the deployment process is automated. You don’t need
 to manually insert the lambda code or change the API path on the index
 file.
 
-
+## Screenshots
 <img src="images/media/image2.png" />
 <img src="images/media/image3.png" />
 <img src="images/media/image4.png" />
+<img src="images/media/image5.png" />
 
-Improvements
+
+##Improvements
 + Added sign up and user management feature using Cognito
 + Utilized Cloudfront 
  
