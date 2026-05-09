@@ -65,7 +65,7 @@ file.
 <img src="images/media/image5.png" />
 
 
-##Improvements
+## Improvements
 + Added sign up and user management feature using Cognito
 + Utilized Cloudfront 
  
