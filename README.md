@@ -43,7 +43,7 @@ How to start CI/CD automation step-by-step:
 Please note that you must create an IAM user with least privilege authorization 
 to the services on the cloud system above for GitHub. The S3 bucket name
 must be unique globally. In case of an error, you should remove all the
-AWS services manually and start the deployment from GitHub Actions one
+AWS services and start the deployment from GitHub Actions one
 more time.
 
 3.  On the GitHub Actions menu, start the continuous development
