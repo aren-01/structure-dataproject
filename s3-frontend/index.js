@@ -31,6 +31,35 @@ function getIdToken() {
   return localStorage.getItem("app_id_token");
 }
 
+function getUsernameFromToken() {
+  const idToken = getIdToken();
+
+  if (!idToken) return null;
+
+  try {
+    const payload = JSON.parse(atob(idToken.split(".")[1]));
+
+    return (
+      payload.name ||
+      payload.given_name ||
+      payload.preferred_username ||
+      payload["cognito:username"] ||
+      payload.email ||
+      null
+    );
+  } catch (error) {
+    return null;
+  }
+}
+
+function setUserGreeting() {
+  const greeting = document.getElementById("userGreeting");
+  if (!greeting) return;
+
+  const username = getUsernameFromToken();
+  greeting.textContent = username ? `Hi, ${username}` : "Hi there!";
+}
+
 function requireLogin() {
   const idToken = getIdToken();
   if (!idToken) {
@@ -115,7 +144,7 @@ logoutBtn.addEventListener("click", () => {
 submitBtn.addEventListener("click", async () => {
   const prompt = inputBox.value.trim();
   const idToken = requireLogin();
-  latestPrompt = prompt;
+
 
   if (!idToken) return;
 
@@ -123,7 +152,8 @@ submitBtn.addEventListener("click", async () => {
     outputBox.value = "Please enter some text.";
     return;
   }
-
+  latestPrompt = prompt;
+  
   const requestId = createRequestId();
 
   submitBtn.disabled = true;
@@ -384,4 +414,6 @@ function renderSavedItems(items) {
   });
 }
 
+
+setUserGreeting();
 loadSavedItems();
