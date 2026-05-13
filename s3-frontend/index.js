@@ -25,6 +25,7 @@ const logoutBtn = document.getElementById("logoutBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 
 let latestOutput = null;
+let latestPrompt = "";
 
 function getIdToken() {
   return localStorage.getItem("app_id_token");
@@ -114,6 +115,7 @@ logoutBtn.addEventListener("click", () => {
 submitBtn.addEventListener("click", async () => {
   const prompt = inputBox.value.trim();
   const idToken = requireLogin();
+  latestPrompt = prompt;
 
   if (!idToken) return;
 
@@ -186,7 +188,12 @@ saveBtn.addEventListener("click", async () => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${idToken}`
       },
-      body: JSON.stringify({ output: latestOutput })
+      body: JSON.stringify({
+        output: {
+          ...latestOutput,
+          prompt: latestPrompt
+        }
+      })
     });
 
     const data = await res.json();
@@ -335,12 +342,11 @@ function renderSavedItems(items) {
     const displayItem = { ...item };
     delete displayItem.userId;
 
-    const label =
-      displayItem.name ||
-      displayItem.title ||
-      displayItem.major ||
-      displayItem.id ||
-      "Saved item";
+    const label = displayItem.prompt
+      ? displayItem.prompt.length > 18
+        ? `${displayItem.prompt.slice(0, 18)}...`
+        : displayItem.prompt
+      : displayItem.id || "Saved item";
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "history-label";
