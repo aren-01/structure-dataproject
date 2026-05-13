@@ -102,7 +102,7 @@ async function waitForReviewOutput(idToken, requestId) {
     await sleep(delayMs);
   }
 
-  throw new Error("The request was queued, but no result was ready yet. Try again in a moment.");
+  throw new Error("The request has been queued, but no result was ready yet. Try again in a moment.");
 }
 
 // check login.js
@@ -127,7 +127,7 @@ submitBtn.addEventListener("click", async () => {
   submitBtn.disabled = true;
   saveBtn.disabled = true;
   latestOutput = null;
-  outputBox.value = "Sending request to queue...";
+  outputBox.value = "Sending request...";
 
   try {
     const res = await fetch(GENERATE_URL, {
@@ -142,7 +142,7 @@ submitBtn.addEventListener("click", async () => {
       })
     });
 
-    // API Gateway -> SQS returns XML, not JSON. Do not call res.json() here.
+    
     const queuedResponse = await readResponseSafely(res);
 
     if (!res.ok) {
@@ -150,7 +150,7 @@ submitBtn.addEventListener("click", async () => {
       return;
     }
 
-    outputBox.value = "Queued. Waiting for Lambda to process SQS message...";
+    outputBox.value = "Queued";
 
     const reviewItem = await waitForReviewOutput(idToken, requestId);
 
