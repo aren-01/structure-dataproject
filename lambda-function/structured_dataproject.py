@@ -40,6 +40,7 @@ COMMON_HEADERS = {
 
 REVIEW_OUTPUT_TYPE = "reviewoutput"
 SAVED_ITEM_TYPE = "saved"
+HIDDEN_RESPONSE_FIELDS = {"userId", "createdAt", "updatedAt", "itemType"}
 
 
 def lambda_handler(event, context):
@@ -251,7 +252,6 @@ def get_sqs_message_attribute(record, name):
     return value.get("stringValue") or value.get("StringValue")
 
 
-
 def get_user_id_from_authorization_header(value):
     if not value:
         return None
@@ -358,12 +358,16 @@ def save_handler(event, context, user_id):
 
     table.put_item(Item=item)
 
-    return response(200, {"message": "Saved successfully", "item": item})
+    return response(200, {
+        "message": "Saved successfully",
+        "item": hide_internal_fields(item),
+    })
 
 
 def saved_handler(user_id):
     items = get_saved_items(user_id)
-    return response(200, {"items": items})
+    visible_items = [hide_internal_fields(item) for item in items]
+    return response(200, {"items": visible_items})
 
 
 def delete_handler(event, user_id):
@@ -440,6 +444,17 @@ def get_review_outputs(user_id):
     return [item for item in items if item.get("itemType") == REVIEW_OUTPUT_TYPE]
 
 
+def hide_internal_fields(item):
+    if not isinstance(item, dict):
+        return item
+
+    return {
+        key: value
+        for key, value in item.items()
+        if key not in HIDDEN_RESPONSE_FIELDS
+    }
+
+
 def build_xlsx(items):
     flattened_items = [flatten_item(item) for item in items]
 
@@ -477,7 +492,7 @@ def flatten_item(value, parent_key=""):
         return {parent_key or "value": value}
 
     for key, child_value in value.items():
-        if key == "userId":
+        if key in HIDDEN_RESPONSE_FIELDS:
             continue
 
         column_name = f"{parent_key}.{key}" if parent_key else str(key)
