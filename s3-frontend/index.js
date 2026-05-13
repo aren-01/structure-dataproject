@@ -98,7 +98,7 @@ async function waitForReviewOutput(idToken, requestId) {
       return item;
     }
 
-    outputBox.value = `Structuring...\n\nChecking result ${attempt}/${attempts}...`;
+   outputBox.value = "Structuring your data...";
     await sleep(delayMs);
   }
 
@@ -127,7 +127,7 @@ submitBtn.addEventListener("click", async () => {
   submitBtn.disabled = true;
   saveBtn.disabled = true;
   latestOutput = null;
-  outputBox.value = "Structuring...\n\nSending request to queue...";
+  outputBox.value = "Structuring your data...";
 
   try {
     const res = await fetch(GENERATE_URL, {
@@ -151,7 +151,7 @@ submitBtn.addEventListener("click", async () => {
       return;
     }
 
-    outputBox.value = "Structuring...\n\nQueued. Waiting for Lambda to process SQS message...";
+    outputBox.value = "Structuring your data...";
 
     const reviewItem = await waitForReviewOutput(idToken, requestId);
 
