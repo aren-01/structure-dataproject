@@ -375,15 +375,22 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
 }
 
 resource "aws_apigatewayv2_integration" "sqs_integration" {
-  api_id              = aws_apigatewayv2_api.http_api.id
-  credentials_arn     = aws_iam_role.apigateway_sqs_role.arn
-  description         = "Send generate requests to SQS"
-  integration_type    = "AWS_PROXY"
-  integration_subtype = "SQS-SendMessage"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  credentials_arn        = aws_iam_role.apigateway_sqs_role.arn
+  description            = "Send generate requests to SQS"
+  integration_type       = "AWS_PROXY"
+  integration_subtype    = "SQS-SendMessage"
+  payload_format_version = "1.0"
 
   request_parameters = {
     QueueUrl    = aws_sqs_queue.structured_dataproject_sqs.id
     MessageBody = "$request.body"
+    MessageAttributes = jsonencode({
+      UserId = {
+        DataType    = "String"
+        StringValue = "$${context.authorizer.jwt.claims.sub}"
+      }
+    })
   }
 }
 
@@ -450,9 +457,10 @@ resource "aws_lambda_permission" "allow_apigw_invoke" {
 }
 
 resource "aws_lambda_event_source_mapping" "structured_function_sqs_trigger" {
-  event_source_arn = aws_sqs_queue.structured_dataproject_sqs.arn
-  function_name    = aws_lambda_function.structured_function.arn
-  batch_size       = 10
+  event_source_arn        = aws_sqs_queue.structured_dataproject_sqs.arn
+  function_name           = aws_lambda_function.structured_function.arn
+  batch_size              = 10
+  function_response_types = ["ReportBatchItemFailures"]
 
   depends_on = [
     aws_iam_role_policy.sqs_access
