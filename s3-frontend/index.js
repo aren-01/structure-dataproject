@@ -14,6 +14,7 @@ const SAVE_URL = `${API_BASE_URL}/save`;
 const SAVED_URL = `${API_BASE_URL}/saved`;
 const DELETE_URL = `${API_BASE_URL}/delete`;
 const DOWNLOAD_URL = `${API_BASE_URL}/download`;
+const REVIEW_OUTPUT_URL = `${API_BASE_URL}/reviewoutput`;
 
 const inputBox = document.getElementById("inputBox");
 const outputBox = document.getElementById("outputBox");
@@ -39,6 +40,71 @@ function requireLogin() {
   return idToken;
 }
 
+function createRequestId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `request-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+async function readResponseSafely(res) {
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return res.json();
+  }
+
+  const text = await res.text();
+
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    return { raw: text };
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchReviewOutput(idToken, requestId) {
+  const url = `${REVIEW_OUTPUT_URL}?id=${encodeURIComponent(requestId)}&limit=1`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${idToken}`
+    }
+  });
+
+  const data = await readResponseSafely(res);
+
+  if (!res.ok) {
+    throw new Error(data.error || data.message || data.raw || "Could not get review output.");
+  }
+
+  return (data.items || [])[0] || null;
+}
+
+async function waitForReviewOutput(idToken, requestId) {
+  const attempts = 40;
+  const delayMs = 3000;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const item = await fetchReviewOutput(idToken, requestId);
+
+    if (item && item.status === "completed" && item.output) {
+      return item;
+    }
+
+    outputBox.value = `Queued. Waiting for result... (${attempt}/${attempts})`;
+    await sleep(delayMs);
+  }
+
+  throw new Error("The request was queued, but no result was ready yet. Try again in a moment.");
+}
+
 // check login.js
 logoutBtn.addEventListener("click", () => {
   localStorage.removeItem("app_id_token");
@@ -56,10 +122,12 @@ submitBtn.addEventListener("click", async () => {
     return;
   }
 
+  const requestId = createRequestId();
+
   submitBtn.disabled = true;
   saveBtn.disabled = true;
   latestOutput = null;
-  outputBox.value = "Processing...";
+  outputBox.value = "Sending request to queue...";
 
   try {
     const res = await fetch(GENERATE_URL, {
@@ -68,17 +136,25 @@ submitBtn.addEventListener("click", async () => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${idToken}`
       },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({
+        id: requestId,
+        prompt
+      })
     });
 
-    const data = await res.json();
+    // API Gateway -> SQS returns XML, not JSON. Do not call res.json() here.
+    const queuedResponse = await readResponseSafely(res);
 
     if (!res.ok) {
-      outputBox.value = JSON.stringify(data, null, 2);
+      outputBox.value = JSON.stringify(queuedResponse, null, 2);
       return;
     }
 
-    latestOutput = data.output;
+    outputBox.value = "Queued. Waiting for Lambda to process SQS message...";
+
+    const reviewItem = await waitForReviewOutput(idToken, requestId);
+
+    latestOutput = reviewItem.output;
     outputBox.value = JSON.stringify(latestOutput, null, 2);
     saveBtn.disabled = false;
 
