@@ -104,14 +104,13 @@ def sqs_handler(event, context):
 
     Expected SQS message body from API Gateway:
     {
-      "userId": "<cognito-sub>",
-      "body": {"prompt": "..."}
+      "id": "<frontend-request-id>",
+      "prompt": "..."
     }
 
-    This function is also tolerant of:
-    - {"userId": "...", "prompt": "..."}
-    - {"requestContext": ..., "body": "{...}"}
-    - raw string bodies, although those cannot be mapped back to a Cognito user.
+    API Gateway also passes the already-validated Authorization header as an
+    SQS message attribute. The Lambda decodes that JWT to recover the Cognito
+    sub/userId for DynamoDB partitioning.
     """
     batch_item_failures = []
     processed = []
@@ -189,11 +188,13 @@ def parse_sqs_record(record):
 
     message_attributes = record.get("messageAttributes", {}) or {}
     attribute_user_id = get_sqs_message_attribute(record, "userId")
+    authorization_token = get_sqs_message_attribute(record, "Authorization")
 
     user_id = (
         decoded.get("userId")
         or decoded.get("user_id")
         or attribute_user_id
+        or get_user_id_from_authorization_header(authorization_token)
     )
 
     inner_body = (
@@ -242,6 +243,45 @@ def get_sqs_message_attribute(record, name):
         return None
 
     return value.get("stringValue") or value.get("StringValue")
+
+
+
+def get_user_id_from_authorization_header(value):
+    if not value:
+        return None
+
+    token = str(value).strip()
+
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+
+    claims = decode_jwt_claims_without_verification(token)
+
+    if not isinstance(claims, dict):
+        return None
+
+    return claims.get("sub")
+
+
+def decode_jwt_claims_without_verification(token):
+    """
+    Decode JWT claims without re-verifying the signature.
+
+    This token came from the Authorization header on a route that API Gateway
+    already validated with the JWT authorizer before sending the message to SQS.
+    """
+    try:
+        parts = str(token).split(".")
+        if len(parts) < 2:
+            return None
+
+        payload = parts[1]
+        padding = "=" * (-len(payload) % 4)
+        decoded = base64.urlsafe_b64decode((payload + padding).encode("utf-8"))
+        return json.loads(decoded.decode("utf-8"))
+    except Exception as exc:
+        print(f"Could not decode JWT claims from SQS Authorization attribute: {exc}")
+        return None
 
 
 def generate_handler(event, context, user_id):
