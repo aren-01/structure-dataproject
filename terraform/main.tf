@@ -84,6 +84,17 @@ resource "aws_dynamodb_table" "structured_table" {
   }
 }
 
+resource "aws_dynamodb_table" "project_user_log" {
+  name         = "project_user_log"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "userId"
+
+  attribute {
+    name = "userId"
+    type = "S"
+  }
+}
+
 resource "aws_sqs_queue" "structured_dataproject_sqs" {
   name                       = "structure-dataproject-sqs"
   visibility_timeout_seconds = 180
