@@ -138,7 +138,8 @@ submitBtn.addEventListener("click", async () => {
       },
       body: JSON.stringify({
         id: requestId,
-        prompt
+        prompt,
+        authToken: idToken
       })
     });
 
