@@ -324,3 +324,115 @@
     display: block;
   }
 }
+
+
+/* Mobile-only history sidebar behavior
+   Desktop remains unchanged. On mobile, the sidebar starts as a small
+   right-side tab. Your existing collapse button toggles .collapsed;
+   on mobile that class is used as the expanded state. */
+@media (max-width: 980px) {
+  .app-shell {
+    padding-right: 72px;
+  }
+
+  .main {
+    flex-direction: column;
+  }
+
+  .workspace {
+    width: 100%;
+  }
+
+  .sidebar {
+    position: fixed;
+    right: 12px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    z-index: 1000;
+    width: 54px !important;
+    height: 72px;
+    max-width: calc(100vw - 24px);
+    border-radius: 14px 0 0 14px;
+    transition: width 0.25s ease, height 0.25s ease, top 0.25s ease, transform 0.25s ease;
+  }
+
+  .sidebar .sidebar-head {
+    min-height: 100%;
+    padding: 8px;
+    border-bottom: none;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .sidebar .sidebar-title,
+  .sidebar .sidebar-content,
+  .sidebar .sidebar-footer {
+    display: none !important;
+  }
+
+  .sidebar .collapse-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand);
+    color: #ffffff;
+    font-size: 0;
+  }
+
+  .sidebar .collapse-btn::before {
+    content: "<";
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .sidebar .collapse-btn:hover:not(:disabled) {
+    background: var(--brand-strong);
+  }
+
+  /* Expanded mobile sidebar: triggered by your existing .collapsed toggle */
+  .sidebar.collapsed {
+    top: 88px;
+    bottom: 12px;
+    transform: none;
+    width: min(320px, calc(100vw - 24px)) !important;
+    height: auto;
+    border-radius: var(--radius);
+  }
+
+  .sidebar.collapsed .sidebar-head {
+    min-height: 52px;
+    padding: 10px;
+    border-bottom: 1px solid var(--line);
+    justify-content: flex-start;
+  }
+
+  .sidebar.collapsed .sidebar-title {
+    display: block !important;
+  }
+
+  .sidebar.collapsed .sidebar-content {
+    display: flex !important;
+  }
+
+  .sidebar.collapsed .sidebar-footer {
+    display: block !important;
+  }
+
+  .sidebar.collapsed .collapse-btn {
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .sidebar.collapsed .collapse-btn:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  .sidebar.collapsed .collapse-btn::before {
+    content: ">";
+  }
+}
