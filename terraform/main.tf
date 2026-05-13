@@ -382,19 +382,14 @@ resource "aws_apigatewayv2_integration" "sqs_integration" {
   integration_subtype    = "SQS-SendMessage"
   payload_format_version = "1.0"
 
+  # Keep this integration intentionally minimal. HTTP API -> SQS service
+  # integrations are strict; MessageAttributes mappings often cause generic
+  # {"message":"Bad Request"} responses when the value is not serialized
+  # exactly as SQS expects. The frontend now includes the already-validated
+  # token inside the JSON message body, and Lambda extracts the Cognito sub.
   request_parameters = {
     QueueUrl    = aws_sqs_queue.structured_dataproject_sqs.id
     MessageBody = "$request.body"
-
-    # Pass the exact JWT that API Gateway already validated for this route.
-    # The SQS-triggered Lambda decodes this token to recover the Cognito sub/userId.
-    # This is more reliable than mapping nested JWT claim context into SQS attributes.
-    MessageAttributes = jsonencode({
-      Authorization = {
-        DataType    = "String"
-        StringValue = "$request.header.Authorization"
-      }
-    })
   }
 }
 
