@@ -385,10 +385,14 @@ resource "aws_apigatewayv2_integration" "sqs_integration" {
   request_parameters = {
     QueueUrl    = aws_sqs_queue.structured_dataproject_sqs.id
     MessageBody = "$request.body"
+
+    # Pass the exact JWT that API Gateway already validated for this route.
+    # The SQS-triggered Lambda decodes this token to recover the Cognito sub/userId.
+    # This is more reliable than mapping nested JWT claim context into SQS attributes.
     MessageAttributes = jsonencode({
-      UserId = {
+      Authorization = {
         DataType    = "String"
-        StringValue = "$${context.authorizer.jwt.claims.sub}"
+        StringValue = "$request.header.Authorization"
       }
     })
   }
