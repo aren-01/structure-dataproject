@@ -34,6 +34,8 @@ variable "bucket_name" {
   type        = string
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket" "website_bucket" {
   bucket = var.bucket_name
 }
@@ -80,6 +82,47 @@ resource "aws_dynamodb_table" "structured_table" {
     name = "id"
     type = "S"
   }
+}
+
+resource "aws_sqs_queue" "structured_dataproject_sqs" {
+  name                       = "structure-dataproject-sqs"
+  visibility_timeout_seconds = 180
+  delay_seconds              = 3
+  message_retention_seconds  = 2700
+  sqs_managed_sse_enabled    = true
+}
+
+resource "aws_sqs_queue_redrive_allow_policy" "structured_dataproject_sqs" {
+  queue_url = aws_sqs_queue.structured_dataproject_sqs.id
+
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "denyAll"
+  })
+}
+
+data "aws_iam_policy_document" "structured_dataproject_sqs_owner_only" {
+  statement {
+    sid    = "AllowQueueOwnerOnly"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+
+    actions = [
+      "SQS:*"
+    ]
+
+    resources = [
+      aws_sqs_queue.structured_dataproject_sqs.arn
+    ]
+  }
+}
+
+resource "aws_sqs_queue_policy" "structured_dataproject_sqs_owner_only" {
+  queue_url = aws_sqs_queue.structured_dataproject_sqs.id
+  policy    = data.aws_iam_policy_document.structured_dataproject_sqs_owner_only.json
 }
 
 resource "aws_iam_role" "lambda_role" {
@@ -143,6 +186,38 @@ resource "aws_iam_role_policy" "dynamodb_access" {
   })
 }
 
+resource "aws_iam_role_policy" "sqs_access" {
+  name = "structured-function-sqs-access"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowReadFromStructuredQueue"
+        Effect = "Allow"
+        Action = [
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+          "sqs:ReceiveMessage",
+          "sqs:ListDeadLetterSourceQueues",
+          "sqs:ListQueueTags"
+        ]
+        Resource = aws_sqs_queue.structured_dataproject_sqs.arn
+      },
+      {
+        Sid    = "AllowRequestedDeletesOnStructuredQueue"
+        Effect = "Allow"
+        Action = [
+          "sqs:DeleteMessage",
+          "sqs:DeleteQueue"
+        ]
+        Resource = aws_sqs_queue.structured_dataproject_sqs.arn
+      }
+    ]
+  })
+}
+
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_file = "${path.module}/../lambda-function/structured_dataproject.py"
@@ -161,6 +236,8 @@ resource "aws_lambda_function" "structured_function" {
   environment {
     variables = {
       DYNAMODB_TABLE = aws_dynamodb_table.structured_table.name
+      SQS_QUEUE_ARN  = aws_sqs_queue.structured_dataproject_sqs.arn
+      SQS_QUEUE_URL  = aws_sqs_queue.structured_dataproject_sqs.id
     }
   }
 }
@@ -256,6 +333,39 @@ resource "aws_apigatewayv2_authorizer" "cognito_authorizer" {
   }
 }
 
+resource "aws_iam_role" "apigateway_sqs_role" {
+  name = "structured-apigateway-sqs-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "apigateway_sqs_send_message" {
+  name = "structured-apigateway-sqs-send-message"
+  role = aws_iam_role.apigateway_sqs_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.structured_dataproject_sqs.arn
+      }
+    ]
+  })
+}
+
 resource "aws_apigatewayv2_integration" "lambda_integration" {
   api_id                 = aws_apigatewayv2_api.http_api.id
   integration_type       = "AWS_PROXY"
@@ -264,10 +374,23 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "sqs_integration" {
+  api_id              = aws_apigatewayv2_api.http_api.id
+  credentials_arn     = aws_iam_role.apigateway_sqs_role.arn
+  description         = "Send generate requests to SQS"
+  integration_type    = "AWS_PROXY"
+  integration_subtype = "SQS-SendMessage"
+
+  request_parameters = {
+    QueueUrl    = aws_sqs_queue.structured_dataproject_sqs.id
+    MessageBody = "$request.body"
+  }
+}
+
 resource "aws_apigatewayv2_route" "post_generate" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "POST /generate"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.sqs_integration.id}"
 
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
@@ -309,12 +432,31 @@ resource "aws_apigatewayv2_route" "get_download" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
 }
 
+resource "aws_apigatewayv2_route" "get_reviewoutput" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /reviewoutput"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_authorizer.id
+}
+
 resource "aws_lambda_permission" "allow_apigw_invoke" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.structured_function.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_event_source_mapping" "structured_function_sqs_trigger" {
+  event_source_arn = aws_sqs_queue.structured_dataproject_sqs.arn
+  function_name    = aws_lambda_function.structured_function.arn
+  batch_size       = 10
+
+  depends_on = [
+    aws_iam_role_policy.sqs_access
+  ]
 }
 
 resource "aws_apigatewayv2_stage" "project_stage" {
@@ -488,4 +630,16 @@ output "cognito_region" {
 
 output "bucket_name" {
   value = aws_s3_bucket.website_bucket.id
+}
+
+output "sqs_queue_name" {
+  value = aws_sqs_queue.structured_dataproject_sqs.name
+}
+
+output "sqs_queue_url" {
+  value = aws_sqs_queue.structured_dataproject_sqs.id
+}
+
+output "sqs_queue_arn" {
+  value = aws_sqs_queue.structured_dataproject_sqs.arn
 }
