@@ -108,9 +108,9 @@ def sqs_handler(event, context):
       "prompt": "..."
     }
 
-    API Gateway also passes the already-validated Authorization header as an
-    SQS message attribute. The Lambda decodes that JWT to recover the Cognito
-    sub/userId for DynamoDB partitioning.
+    The frontend includes the same JWT that API Gateway already validated in
+    the SQS JSON message body as authToken. Lambda decodes that JWT to recover
+    the Cognito sub/userId for DynamoDB partitioning.
     """
     batch_item_failures = []
     processed = []
@@ -140,8 +140,8 @@ def process_sqs_record(record, context):
 
     if not user_id:
         raise ValueError(
-            "SQS message is missing userId. Update the API Gateway SQS integration "
-            "so it includes $context.authorizer.jwt.claims.sub in the message body."
+            "SQS message is missing userId. Include authToken/idToken in the "
+            "queued JSON body, or include userId in the message body."
         )
 
     if not user_input:
@@ -188,7 +188,13 @@ def parse_sqs_record(record):
 
     message_attributes = record.get("messageAttributes", {}) or {}
     attribute_user_id = get_sqs_message_attribute(record, "userId")
-    authorization_token = get_sqs_message_attribute(record, "Authorization")
+    authorization_token = (
+        get_sqs_message_attribute(record, "Authorization")
+        or decoded.get("authorization")
+        or decoded.get("Authorization")
+        or decoded.get("authToken")
+        or decoded.get("idToken")
+    )
 
     user_id = (
         decoded.get("userId")
