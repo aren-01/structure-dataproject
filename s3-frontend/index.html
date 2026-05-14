@@ -11,7 +11,7 @@
     <header class="topbar">
       <div id="welcomeText" class="welcome">Structure Your Data</div>
       <div class="topbar-right">
-        <div class="tiny-title">Hi there!</div>
+        <div id="userGreeting" class="tiny-title">Hi there!</div>
         <span id="logoutBtn" role="link" tabindex="0" style="cursor: pointer;">Logout</span>
       </div>
     </header>
@@ -24,6 +24,7 @@
           <div class="button-row">
             <button id="submitBtn">Structure it!</button>
             <button id="saveBtn" disabled>Save</button>
+            <button id="micBtn" type="button">Start talking</button>
           </div>
         </div>
       </div>
@@ -46,6 +47,7 @@
   </div>
 
   <script src="index.js"></script>
+  <script src="speech-to-text.js"></script>
 
 </body>
 </html>

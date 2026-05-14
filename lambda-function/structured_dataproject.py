@@ -17,6 +17,9 @@ dynamodb = boto3.resource("dynamodb")
 
 MODEL_ID = "amazon.nova-micro-v1:0"
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE", "structured_dataproject")
+SQS_QUEUE_URL = os.environ.get("SQS_QUEUE_URL", "")
+SQS_QUEUE_ARN = os.environ.get("SQS_QUEUE_ARN", "")
+
 table = dynamodb.Table(TABLE_NAME)
 
 SYSTEM_PROMPT = """
@@ -29,16 +32,24 @@ Rules:
 - Response must start with { and end with }
 """
 
-
 COMMON_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
     "Access-Control-Allow-Methods": "OPTIONS,GET,POST",
 }
 
+REVIEW_OUTPUT_TYPE = "reviewoutput"
+SAVED_ITEM_TYPE = "saved"
+HIDDEN_RESPONSE_FIELDS = {"userId", "createdAt", "updatedAt", "itemType"}
+
 
 def lambda_handler(event, context):
     try:
+        # New trigger: SQS invokes the Lambda with Records.
+        if is_sqs_event(event):
+            return sqs_handler(event, context)
+
+        # Existing trigger: API Gateway invokes the Lambda for GET/POST routes.
         path = event.get("rawPath") or event.get("path", "")
         method = (
             event.get("requestContext", {})
@@ -55,8 +66,12 @@ def lambda_handler(event, context):
         if not user_id:
             return response(401, {"error": "Unauthorized"})
 
+        # Kept for local/manual testing. In Terraform, POST /generate now sends to SQS.
         if path.endswith("/generate") and method == "POST":
             return generate_handler(event, context, user_id)
+
+        if path.endswith("/reviewoutput") and method == "GET":
+            return reviewoutput_handler(event, user_id)
 
         if path.endswith("/save") and method == "POST":
             return save_handler(event, context, user_id)
@@ -76,33 +91,249 @@ def lambda_handler(event, context):
         return response(500, {"error": str(e)})
 
 
+def is_sqs_event(event):
+    records = event.get("Records") if isinstance(event, dict) else None
+    if not records:
+        return False
+
+    return any(record.get("eventSource") == "aws:sqs" for record in records)
+
+
+def sqs_handler(event, context):
+    """
+    Processes SQS messages created by POST /generate.
+
+    Expected SQS message body from API Gateway:
+    {
+      "id": "<frontend-request-id>",
+      "prompt": "..."
+    }
+
+    The frontend includes the same JWT that API Gateway already validated in
+    the SQS JSON message body as authToken. Lambda decodes that JWT to recover
+    the Cognito sub/userId for DynamoDB partitioning.
+    """
+    batch_item_failures = []
+    processed = []
+
+    for record in event.get("Records", []):
+        message_id = record.get("messageId") or context.aws_request_id
+
+        try:
+            result = process_sqs_record(record, context)
+            processed.append(result)
+        except Exception as exc:
+            print(f"Failed to process SQS message {message_id}: {exc}")
+            batch_item_failures.append({"itemIdentifier": message_id})
+
+    # Requires function_response_types = ["ReportBatchItemFailures"] in Terraform.
+    return {
+        "batchItemFailures": batch_item_failures,
+        "processed": len(processed),
+        "failed": len(batch_item_failures),
+    }
+
+
+def process_sqs_record(record, context):
+    message = parse_sqs_record(record)
+    user_id = str(message.get("userId") or "").strip()
+    user_input = str(message.get("prompt") or "").strip()
+
+    if not user_id:
+        raise ValueError(
+            "SQS message is missing userId. Include authToken/idToken in the "
+            "queued JSON body, or include userId in the message body."
+        )
+
+    if not user_input:
+        raise ValueError("SQS message is missing prompt")
+
+    output_item = generate_item(user_input)
+
+    now = datetime.now(timezone.utc).isoformat()
+    item_id = str(
+        message.get("id")
+        or record.get("messageId")
+        or context.aws_request_id
+    )
+
+    item = {
+        "userId": user_id,
+        "id": item_id,
+        "itemType": REVIEW_OUTPUT_TYPE,
+        "status": "completed",
+        "prompt": user_input,
+        "output": output_item,
+        "createdAt": now,
+        "updatedAt": now,
+        "source": "sqs",
+        "sqsMessageId": record.get("messageId", ""),
+        "lambdaRequestId": context.aws_request_id,
+    }
+
+    item = convert_numbers(item)
+    table.put_item(Item=item)
+
+    return {"id": item_id, "userId": user_id, "status": "completed"}
+
+
+def parse_sqs_record(record):
+    body = record.get("body", "")
+    decoded = parse_json_value(body)
+
+    if not isinstance(decoded, dict):
+        return {
+            "userId": get_sqs_message_attribute(record, "userId"),
+            "prompt": str(decoded or body),
+        }
+
+    message_attributes = record.get("messageAttributes", {}) or {}
+    attribute_user_id = get_sqs_message_attribute(record, "userId")
+    authorization_token = (
+        get_sqs_message_attribute(record, "Authorization")
+        or decoded.get("authorization")
+        or decoded.get("Authorization")
+        or decoded.get("authToken")
+        or decoded.get("idToken")
+    )
+
+    user_id = (
+        decoded.get("userId")
+        or decoded.get("user_id")
+        or attribute_user_id
+        or get_user_id_from_authorization_header(authorization_token)
+    )
+
+    inner_body = (
+        decoded.get("body")
+        or decoded.get("requestBody")
+        or decoded.get("payload")
+        or decoded
+    )
+
+    if isinstance(inner_body, str):
+        inner_body = parse_json_value(inner_body)
+
+    if not isinstance(inner_body, dict):
+        inner_body = {"prompt": str(inner_body or "")}
+
+    prompt = (
+        inner_body.get("prompt")
+        or inner_body.get("input")
+        or inner_body.get("message")
+        or decoded.get("prompt")
+        or decoded.get("input")
+        or decoded.get("message")
+    )
+
+    item_id = decoded.get("id") or inner_body.get("id")
+
+    return {
+        "userId": user_id,
+        "prompt": prompt,
+        "id": item_id,
+        "raw": decoded,
+        "messageAttributes": message_attributes,
+    }
+
+
+def get_sqs_message_attribute(record, name):
+    attributes = record.get("messageAttributes", {}) or {}
+    value = None
+
+    for key, candidate in attributes.items():
+        if str(key).lower() == str(name).lower():
+            value = candidate
+            break
+
+    if not isinstance(value, dict):
+        return None
+
+    return value.get("stringValue") or value.get("StringValue")
+
+
+def get_user_id_from_authorization_header(value):
+    if not value:
+        return None
+
+    token = str(value).strip()
+
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+
+    claims = decode_jwt_claims_without_verification(token)
+
+    if not isinstance(claims, dict):
+        return None
+
+    return claims.get("sub")
+
+
+def decode_jwt_claims_without_verification(token):
+    """
+    Decode JWT claims without re-verifying the signature.
+
+    This token came from the Authorization header on a route that API Gateway
+    already validated with the JWT authorizer before sending the message to SQS.
+    """
+    try:
+        parts = str(token).split(".")
+        if len(parts) < 2:
+            return None
+
+        payload = parts[1]
+        padding = "=" * (-len(payload) % 4)
+        decoded = base64.urlsafe_b64decode((payload + padding).encode("utf-8"))
+        return json.loads(decoded.decode("utf-8"))
+    except Exception as exc:
+        print(f"Could not decode JWT claims from SQS Authorization attribute: {exc}")
+        return None
+
+
 def generate_handler(event, context, user_id):
     body = parse_body(event)
-    user_input = body.get("prompt", "").strip()
+    user_input = str(body.get("prompt", "")).strip()
 
     if not user_input:
         return response(400, {"error": "Prompt is required"})
 
+    item = generate_item(user_input)
+    item["id"] = context.aws_request_id
+    item = convert_numbers(item)
+
+    return response(200, {"output": item})
+
+
+def generate_item(user_input):
     r = bedrock.converse(
         modelId=MODEL_ID,
         system=[{"text": SYSTEM_PROMPT}],
         messages=[
             {
                 "role": "user",
-                "content": [{"text": user_input}]
+                "content": [{"text": user_input}],
             }
         ],
-        inferenceConfig={"maxTokens": 300, "temperature": 0}
+        inferenceConfig={"maxTokens": 300, "temperature": 0},
     )
 
     text = r["output"]["message"]["content"][0]["text"]
-    item = normalize_output(text)
+    return normalize_output(text)
 
-    item["id"] = context.aws_request_id
 
-    item = convert_numbers(item)
+def reviewoutput_handler(event, user_id):
+    params = event.get("queryStringParameters") or {}
+    requested_id = str(params.get("id") or "").strip()
+    limit = parse_positive_int(params.get("limit"), default=25, maximum=100)
 
-    return response(200, {"output": item})
+    items = get_review_outputs(user_id)
+
+    if requested_id:
+        items = [item for item in items if str(item.get("id")) == requested_id]
+
+    items.sort(key=lambda item: item.get("createdAt", ""), reverse=True)
+
+    return response(200, {"items": items[:limit]})
 
 
 def save_handler(event, context, user_id):
@@ -120,17 +351,23 @@ def save_handler(event, context, user_id):
         item["id"] = context.aws_request_id
 
     item["userId"] = user_id
+    item.setdefault("itemType", SAVED_ITEM_TYPE)
+    item.setdefault("createdAt", datetime.now(timezone.utc).isoformat())
 
     item = convert_numbers(item)
 
     table.put_item(Item=item)
 
-    return response(200, {"message": "Saved successfully", "item": item})
+    return response(200, {
+        "message": "Saved successfully",
+        "item": hide_internal_fields(item),
+    })
 
 
 def saved_handler(user_id):
     items = get_saved_items(user_id)
-    return response(200, {"items": items})
+    visible_items = [hide_internal_fields(item) for item in items]
+    return response(200, {"items": visible_items})
 
 
 def delete_handler(event, user_id):
@@ -173,7 +410,7 @@ def download_handler(user_id):
     }
 
 
-def get_saved_items(user_id):
+def query_user_items(user_id):
     items = []
     query_args = {
         "KeyConditionExpression": Key("userId").eq(user_id)
@@ -190,6 +427,32 @@ def get_saved_items(user_id):
         query_args["ExclusiveStartKey"] = last_key
 
     return items
+
+
+def get_saved_items(user_id):
+    items = query_user_items(user_id)
+
+    # Keep old saved records that do not have itemType, but exclude generated review outputs.
+    return [
+        item for item in items
+        if item.get("itemType") in (None, "", SAVED_ITEM_TYPE)
+    ]
+
+
+def get_review_outputs(user_id):
+    items = query_user_items(user_id)
+    return [item for item in items if item.get("itemType") == REVIEW_OUTPUT_TYPE]
+
+
+def hide_internal_fields(item):
+    if not isinstance(item, dict):
+        return item
+
+    return {
+        key: value
+        for key, value in item.items()
+        if key not in HIDDEN_RESPONSE_FIELDS
+    }
 
 
 def build_xlsx(items):
@@ -229,7 +492,7 @@ def flatten_item(value, parent_key=""):
         return {parent_key or "value": value}
 
     for key, child_value in value.items():
-        if key == "userId":
+        if key in HIDDEN_RESPONSE_FIELDS:
             continue
 
         column_name = f"{parent_key}.{key}" if parent_key else str(key)
@@ -344,6 +607,9 @@ def get_user_id(event):
 def parse_body(event):
     body = event.get("body", {})
 
+    if event.get("isBase64Encoded") and isinstance(body, str):
+        body = base64.b64decode(body).decode("utf-8")
+
     if isinstance(body, str):
         if not body:
             return {}
@@ -353,6 +619,26 @@ def parse_body(event):
         return body
 
     return {}
+
+
+def parse_json_value(value):
+    if isinstance(value, (dict, list)):
+        return value
+
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        return value
+
+    value = value.strip()
+    if not value:
+        return None
+
+    try:
+        return json.loads(value)
+    except Exception:
+        return value
 
 
 def normalize_output(text):
@@ -373,6 +659,18 @@ def normalize_output(text):
         return obj
 
     return {"output": obj}
+
+
+def parse_positive_int(value, default, maximum):
+    try:
+        parsed = int(value)
+    except Exception:
+        return default
+
+    if parsed < 1:
+        return default
+
+    return min(parsed, maximum)
 
 
 def convert_numbers(value):
@@ -405,5 +703,5 @@ def response(status, body):
     return {
         "statusCode": status,
         "headers": COMMON_HEADERS,
-        "body": json.dumps(json_safe(body))
+        "body": json.dumps(json_safe(body)),
     }
