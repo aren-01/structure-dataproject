@@ -269,11 +269,22 @@ downloadBtn.addEventListener("click", async () => {
     }
 
     const blob = await res.blob();
+
+    const contentDisposition = res.headers.get("Content-Disposition");
+
+    let filename = "saved-data.xlsx";
+
+    const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+    if (filenameMatch?.[1]) {
+    filename = filenameMatch[1];
+    }
+
     const objectUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = objectUrl;
-    link.download = "saved-data.xlsx";
+    link.download = filename;
+
     document.body.appendChild(link);
     link.click();
     link.remove();
