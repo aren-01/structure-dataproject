@@ -10,9 +10,9 @@ system is to create a basis for the daily business tasks when
 unstructured data needs to be converted into structured data to increase
 efficiency in data operations. Instead of manually structuring the data,
 LLM with prompt engineering will save time, and thanks to the
-serverless, less costly models in Bedrock, the company will save money.
+serverless architecture and less costly models in Bedrock, it will be affordable for startups.
 Terraform will automatically deploy most of the system. Prompt
-engineering is a good method to structure data and the model response. A
+engineering is a good method to structure data and the model response. The system also includes user register and sign in pages, and the users are authorized through Cognito. There are some functions in the app such as saving your data as an XLSX file, reviewing your history, and talking through speech-to-text feature. A
 sample I/O is below:
 
 User input:
