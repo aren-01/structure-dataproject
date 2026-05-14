@@ -11,7 +11,7 @@ unstructured data needs to be converted into structured data to increase
 efficiency in data operations. Instead of manually structuring the data,
 LLM with prompt engineering will save time, and thanks to the
 serverless architecture and less costly models in Bedrock, it will be affordable for startups.
-Terraform will automatically deploy most of the system. Prompt
+Terraform will automatically deploy most of the system. SQS limits the requests per second to prevent overloading. Prompt
 engineering is a good method to structure data and the model response. The system also includes user register and sign in pages, and the users are authorized through Cognito. There are some functions in the app such as saving your data as an XLSX file, reviewing your history, and talking through speech-to-text feature. A
 sample I/O is below:
 
