@@ -123,7 +123,7 @@ jobs:
           aws s3 cp s3-frontend/login.tmp.js s3://${{ secrets.S3_BUCKET_NAME }}/login.js \
             --content-type application/javascript
 
-          aws s3 cp s3-frontend/text-to-speech-structure-data.js s3://${{ secrets.S3_BUCKET_NAME }}/text-to-speech-structure-data.js \
+          aws s3 cp s3-frontend/speech-to-text.js s3://${{ secrets.S3_BUCKET_NAME }}/speech-to-text.js \
             --content-type application/javascript
 
       - name: Zip the Lambda function first
