@@ -136,10 +136,17 @@
       gap: 10px;
     }
 
-    #submitBtn,
-    #saveBtn {
-      width: 100%;
-    }
+   #submitBtn,
+   #saveBtn {
+     flex: 1;
+     width: auto;
+   }
+
+#micBtn {
+  flex: 0 0 140px;
+  width: auto;
+  white-space: nowrap;
+}
 
     #logoutBtn {
       width: auto;
