@@ -3,17 +3,29 @@
 <img src="images/media/image-1a.jpg" />
 
 This is the cloud system I designed to structure data with the help of
-Bedrock and Amazon Nova Micro LLM in an AWS free tier account. This 
-simple system converts user inputs into JSON format, displays it on the
-web interface, and writes the data into DynamoDB. The objective of this
-system is to create a basis for the daily business tasks when
+Bedrock and Amazon Nova Micro LLM in an AWS free tier account. 
+
+This system converts user inputs into JSON format, displays it on the
+web interface, and writes the data into DynamoDB. 
+
+The objective is to create a basis for the daily business tasks when
 unstructured data needs to be converted into structured data to increase
-efficiency in data operations. Instead of manually structuring the data,
-LLM with prompt engineering will save time, and thanks to the
+efficiency in data operations.
+
+Instead of manually structuring the data, LLM with prompt engineering will save time, and thanks to the
 serverless architecture and less costly models in Bedrock, it will be affordable for startups.
-Terraform will automatically deploy most of the system. SQS limits the requests per second to prevent overloading. Prompt
-engineering is a good method to structure data and the model response. The system also includes user register and sign in pages, and the users are authorized through Cognito. There are some functions in the app such as saving your data as an XLSX file, reviewing your history, and talking through speech-to-text feature. Smarter LLMs will display better results. It is possible to change LLM in the Lambda Function, but for the free tier accounts, others will not be allowed.
-A sample I/O is below:
+
+Terraform will automatically deploy most of the system. SQS limits the requests per second to prevent overloading.
+
+The system also includes user register and sign in pages, and the users are authorized through Cognito. 
+
+There are some functions in the app such as saving your data as an XLSX file, reviewing your history, and talking through speech-to-text feature. 
+
+Smarter LLMs will display better results. It is possible to change LLM in the Lambda Function, but for the free tier accounts, others will not be allowed.
+
+AWS Transcribe is not integrated into that system to transcribe users' speech as it would be highly expensive. Instead, browser based JS library is used (s3-frontend/speech-to-text.js). 
+
+A sample I/O is below for a single prompt:
 
 User input:
 ```
@@ -55,8 +67,8 @@ the link, you can start typing unstructured information. When you click
 on the “Structure It!” button, the web UI will display the results and
 save the table into DynamoDB. Enjoy structuring your complicated data!
 
-Please note that all the deployment process is automated. You don’t need
-to manually insert the lambda code or change the API path on the index
+Please note that all the deployment process is automated. You do not need
+to manually insert the Lambda code or change the API path on the index
 file. This app also opens a Terraform State Bucket in S3 to track the changes.
 
 ## Screenshots
