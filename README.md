@@ -66,9 +66,12 @@ file. This app also opens a Terraform State Bucket in S3 to track the changes.
 <img src="images/media/image5.png" />
 
 ## Security Improvements
-Instead of connecting API Gateway directly with Lambda, SQS processes the requrests and sends them to the Lambda Function
+Instead of connecting API Gateway directly with Lambda, SQS processes the requrests and sends them to the Lambda Function.
+
 Lambda function limits the user prompt to a maximum of 500 words and 5000 characters. 
+
 API Gateway access is authorized by Cognito. Even though if someone attempts to change frontend, they will not be able to use this app's functions.
+
 SQS prevents sending multiple requrests to Bedrock at the same time.
 
 
