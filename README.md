@@ -27,8 +27,9 @@ Output:
   "id": "a31b6166-e799-4052-a6dd-69f1019900d9"
 }
 ```
+## How to Deploy
 
-How to start CI/CD automation step-by-step:
+To start CI/CD automation step-by-step:
 
 1.  Fork the entire Git.
 
@@ -41,7 +42,7 @@ How to start CI/CD automation step-by-step:
 ```S3_BUCKET_NAME```
 
 Please note that you must create an IAM user with least privilege authorization 
-to the services on the cloud system above for GitHub. The S3 bucket name
+to the services on the cloud system above for GitHub. This repository includes destroy.yml file to destroy the infrastructure in the cloud. Please be sure that GitHub actions role is authorized to delete these services. The S3 bucket name
 must be unique globally. In case of an error, you should remove all the
 AWS services and start the deployment from GitHub Actions one
 more time.
@@ -56,7 +57,7 @@ save the table into DynamoDB. Enjoy structuring your complicated data!
 
 Please note that all the deployment process is automated. You don’t need
 to manually insert the lambda code or change the API path on the index
-file.
+file. This app also opens a Terraform State Bucket in S3 to track the changes.
 
 ## Screenshots
 <img src="images/media/image2.png" />
@@ -65,7 +66,5 @@ file.
 <img src="images/media/image5.png" />
 
 
-## Improvements
-+ Added sign up and user management feature using Cognito
-+ Utilized Cloudfront 
+
  
