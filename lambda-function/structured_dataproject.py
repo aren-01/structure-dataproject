@@ -163,6 +163,9 @@ def process_sqs_record(record, context):
     if word_count > 500:
         raise ValueError("Prompt exceeds 500 words limit")
 
+    if len(user_input) > 8000:
+        raise ValueError("Prompt exceeds 8000 characters limit")
+
     output_item = generate_item(user_input)
 
     now = datetime.now(timezone.utc).isoformat()
@@ -312,9 +315,8 @@ def generate_handler(event, context, user_id):
     if not user_input:
         return response(400, {"error": "Prompt is required"})
 
-    word_count = len(user_input.split())
-    if word_count > 500:
-        return response(400, {"error": "Prompt exceeds 500 words limit"})
+    if len(user_input) > 8000:
+        return response(400, {"error": "Prompt exceeds 8000 characters limit"})
 
     item = generate_item(user_input)
     item["id"] = context.aws_request_id
