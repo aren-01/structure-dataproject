@@ -148,6 +148,24 @@ def process_sqs_record(record, context):
     if not user_input:
         raise ValueError("SQS message is missing prompt")
 
+    
+    today = datetime.now(timezone.utc).date().isoformat()
+    user_items = query_user_items(user_id)
+    today_requests = [
+        item for item in user_items
+        if item.get("itemType") == REVIEW_OUTPUT_TYPE and
+        item.get("createdAt", "").startswith(today)
+    ]
+    if len(today_requests) >= 50:
+        raise ValueError("You have exceeded your daily limit. Please try again tomorrow.")
+
+    word_count = len(user_input.split())
+    if word_count > 500:
+        raise ValueError("Prompt exceeds 500 words limit")
+
+    if len(user_input) > 8000:
+        raise ValueError("Prompt exceeds 8000 characters limit")
+
     output_item = generate_item(user_input)
 
     now = datetime.now(timezone.utc).isoformat()
@@ -296,6 +314,9 @@ def generate_handler(event, context, user_id):
 
     if not user_input:
         return response(400, {"error": "Prompt is required"})
+
+    if len(user_input) > 8000:
+        return response(400, {"error": "Prompt exceeds 8000 characters limit"})
 
     item = generate_item(user_input)
     item["id"] = context.aws_request_id
@@ -459,10 +480,6 @@ def build_xlsx(items):
     flattened_items = [flatten_item(item) for item in items]
 
     columns = []
-    for preferred in ["id", "name", "title", "major"]:
-        if any(preferred in item for item in flattened_items):
-            columns.append(preferred)
-
     for item in flattened_items:
         for key in item.keys():
             if key not in columns:

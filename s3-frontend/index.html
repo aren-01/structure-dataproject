@@ -48,6 +48,21 @@
 
   <script src="index.js"></script>
   <script src="speech-to-text.js"></script>
+  <script>
+    function countWords(text) {
+      if (text.trim() === '') return 0;
+      return text.trim().split(/\s+/).length;
+    }
 
+    const inputBox = document.getElementById('inputBox');
+
+    inputBox.addEventListener('input', () => {
+      const words = countWords(inputBox.value);
+      if (words > 500) {
+        const wordArray = inputBox.value.trim().split(/\s+/);
+        inputBox.value = wordArray.slice(0, 500).join(' ');
+      }
+    });
+  </script>
 </body>
 </html>
