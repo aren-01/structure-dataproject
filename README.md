@@ -54,7 +54,7 @@ To start CI/CD automation step-by-step:
 ```S3_BUCKET_NAME```
 
 Please note that you must create an IAM user with least privilege authorization 
-to the services on the cloud system above for GitHub. Please see the related file [Least Privilige](./least-privilege-policy.json).
+to the services on the cloud system above for GitHub. Please see the related file [least-privilige-policy.json](./least-privilege-policy.json).
 
 This repository includes [destroy.yml](./.github/workflows/destroy.yml) file to destroy the infrastructure in the cloud. Please be sure that GitHub actions role is authorized to delete these services. The S3 bucket name
 must be unique globally. In case of an error, you should remove all the
@@ -80,7 +80,7 @@ file. This app also opens a Terraform State Bucket in S3 to track the changes.
 <img src="images/media/image5.png" />
 
 ## Security Improvements
-- Instead of connecting API Gateway directly with Lambda, SQS processes the requrests and sends them to the Lambda Function.
+- Instead of connecting API Gateway directly with Lambda, SQS processes the requrests and sends them to the Lambda Function. [Structured Data Function](https://github.com/aren-01/structure-dataproject/blob/main/lambda-function/structured_dataproject.py#L162)
 
 - Lambda function limits the user prompt to a maximum of 500 words and 8000 characters. 
 
