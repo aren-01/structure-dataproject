@@ -84,6 +84,8 @@ file. This app also opens a Terraform State Bucket in S3 to track the changes.
 
 - Lambda function limits the user prompt to a maximum of 500 words and 8000 characters. 
 
+- Lambda function limits the daily requests to a maximum of 50 prompts by default.
+
 - API Gateway access is authorized by Cognito. Even though if someone attempts to change frontend, they will not be able to use this app's functions.
 
 - SQS prevents sending multiple requrests to Bedrock at the same time.
