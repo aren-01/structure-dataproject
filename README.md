@@ -1,6 +1,6 @@
 # Structure Your Data!
 
-<img src="images/media/image-1a.jpg" />
+<img src="images/media/img0.jpg" />
 
 This is the cloud system I designed to structure data with the help of
 Bedrock and Amazon Nova Micro LLM in an AWS free tier account. 
@@ -74,10 +74,10 @@ to manually insert the Lambda code or change the API path on the index
 file. This app also opens a Terraform State Bucket in S3 to track the changes.
 
 ## Screenshots
-<img src="images/media/image2.png" />
-<img src="images/media/image3.png" />
-<img src="images/media/image4.png" />
-<img src="images/media/image5.png" />
+<img src="images/media/img1.png" />
+<img src="images/media/img2.png" />
+<img src="images/media/img3.png" />
+<img src="images/media/img4.png" />
 
 ## Security Improvements
 - Instead of connecting API Gateway directly with Lambda, SQS processes the requrests and sends them to the Lambda Function. [Structured Data Function](https://github.com/aren-01/structure-dataproject/blob/main/lambda-function/structured_dataproject.py#L162)
