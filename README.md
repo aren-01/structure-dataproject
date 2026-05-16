@@ -47,9 +47,7 @@ To start CI/CD automation step-by-step:
 
 2.  Define the following secrets on Secrets and Variables
 
-```AWS_ACCESS_KEY_ID```
-
-```AWS_SECRET_ACCESS_KEY```
+```AWS_ROLE_TO_ASSUME```
 
 ```S3_BUCKET_NAME```
 
