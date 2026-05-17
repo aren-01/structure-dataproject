@@ -74,7 +74,7 @@ To start CI/CD automation step-by-step:
 ```S3_BUCKET_NAME```
 
 Please note that you must create an IAM user with least privilege authorization 
-to the services on the cloud system above for GitHub. Please see the related file [least-privilige-policy.json](./least-privilege-policy.json).
+to the services on the cloud system above for GitHub. Please see the related file [least-privilege-policy.json](./least-privilege-policy.json).
 
 This repository includes [destroy.yml](./.github/workflows/destroy.yml) file to destroy the infrastructure in the cloud. Please be sure that GitHub actions role is authorized to delete these services. The S3 bucket name
 must be unique globally. In case of an error, you should remove all the
