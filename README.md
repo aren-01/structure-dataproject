@@ -8,9 +8,7 @@ Bedrock and Amazon Nova Micro LLM in an AWS free tier account.
 - This system converts user inputs into JSON format, displays it on the
 web interface, and writes the data into DynamoDB. 
 
-- The objective is to create a basis for the daily business tasks when
-unstructured data needs to be converted into structured data to increase
-efficiency in data operations.
+- The goal is to save time by automatically turning plain text into organized data.
 
 - Instead of manually structuring the data, LLM with prompt engineering will save time, and thanks to the
 serverless architecture and less costly models in Bedrock, it will be affordable for startups.
@@ -67,7 +65,7 @@ Output:
 
 To start CI/CD automation step-by-step:
 
-1.  Fork the entire Git.
+1.  Fork the repository.
 
 2.  Define the following secrets on Secrets and Variables
 
@@ -86,14 +84,14 @@ more time.
 3.  On the GitHub Actions menu, start the continuous development
     manually.
 
-Finally, Terraform will issue the global S3 address. After clicking on
+Finally, Terraform will output the S3 website URL. After clicking on
 the link, you can start typing unstructured information. When you click
 on the “Structure It!” button, the web UI will display the results and
 save the table into DynamoDB. Enjoy structuring your complicated data!
 
 Please note that all the deployment process is automated. You do not need
 to manually insert the Lambda code or change the API path on the index
-file. This app also opens a Terraform State Bucket in S3 to track the changes.
+file. This app also provisions an S3 bucket to store the remote Terraform state.
 
 ## Screenshots
 <img src="images/media/img1.png" />
@@ -102,13 +100,13 @@ file. This app also opens a Terraform State Bucket in S3 to track the changes.
 <img src="images/media/img4.png" />
 
 ## Security Improvements
-- Instead of connecting API Gateway directly with Lambda, SQS processes the requrests and sends them to the Lambda Function. [Structured Data Function](https://github.com/aren-01/structure-dataproject/blob/main/lambda-function/structured_dataproject.py#L162)
+- Instead of connecting API Gateway directly to Lambda, an SQS queue handles the requests asynchronously. [Structured Data Function](https://github.com/aren-01/structure-dataproject/blob/main/lambda-function/structured_dataproject.py#L162)
 
 - Lambda function limits the user prompt to a maximum of 500 words and 8000 characters. 
 
 - Lambda function limits the daily requests to a maximum of 50 prompts by default.
 
-- API Gateway access is authorized by Cognito. Even though if someone attempts to change frontend, they will not be able to use this app's functions.
+- API Gateway access is authorized by Cognito. Even if someone attempts to modify frontend, they will not be able to use this app's functions.
 
 - SQS prevents sending multiple requrests to Bedrock at the same time.
 
