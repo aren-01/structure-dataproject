@@ -29,14 +29,38 @@ A sample I/O is below for a single prompt:
 
 User input:
 ```
-Hello! I am a graduate student and my major is IT!
+Amazon Web Services, Inc. (AWS) is a subsidiary of Amazon that provides on-demand cloud computing platforms and APIs to individuals, companies, and governments, on a metered, pay-as-you-go basis.
+
+Clients often use this in combination with autoscaling (a process that allows a client to use more computing in times of high application usage, and then scale down to reduce costs when there is less traffic). These cloud computing web services provide various services related to networking, compute, storage, middleware, IoT and other processing capacity, as well as software tools via AWS server farms. This frees clients from managing, scaling, and patching hardware and operating systems.
+
+One of the foundational services is Amazon Elastic Compute Cloud (EC2), which allows users to have at their disposal a virtual cluster of computers, with extremely high availability, which can be interacted with over the internet via REST APIs, a CLI or the AWS console. AWS's virtual computers emulate most of the attributes of a real computer, including hardware central processing units (CPUs) and graphics processing units (GPUs) for processing; local/RAM memory; hard-disk (HDD)/SSD storage; a choice of operating systems; networking; and pre-loaded application software such as web servers, databases, and customer relationship management (CRM).
 ```
 Output:
 ```
+
 {
-  "name": "Graduate Student",
-  "major": "IT",
-  "id": "a31b6166-e799-4052-a6dd-69f1019900d9"
+  "foundationalService": "Amazon Elastic Compute Cloud (EC2)",
+  "emulatedAttributes": [
+    "hardware CPUs",
+    "GPUs",
+    "local/RAM memory",
+    "HDD/SSD storage",
+    "operating systems",
+    "networking",
+    "pre-loaded application software"
+  ],
+  "description": "provides on-demand cloud computing platforms and APIs to individuals, companies, and governments on a metered, pay-as-you-go basis.",
+  "features": [
+    "autoscaling",
+    "networking",
+    "compute",
+    "storage",
+    "middleware",
+    "IoT",
+    "software tools"
+  ],
+  "company": "Amazon Web Services, Inc. (AWS)",
+  "EC2Description": "virtual cluster of computers with high availability, interacted with via REST APIs, CLI, or AWS console"
 }
 ```
 ## How to Deploy
