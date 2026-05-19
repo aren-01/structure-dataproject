@@ -113,3 +113,5 @@ file. This app also provisions an S3 bucket to store the remote Terraform state.
 
 ## Status Badge
 [![Structure Data Project](https://github.com/aren-01/structure-dataproject/actions/workflows/deploy.yml/badge.svg)](https://github.com/aren-01/structure-dataproject/actions/workflows/deploy.yml)
+
+[![Remove the project in the cloud](https://github.com/aren-01/structure-dataproject/actions/workflows/destroy.yml/badge.svg)](https://github.com/aren-01/structure-dataproject/actions/workflows/destroy.yml)
