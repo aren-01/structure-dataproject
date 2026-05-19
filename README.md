@@ -111,4 +111,5 @@ file. This app also provisions an S3 bucket to store the remote Terraform state.
 - SQS prevents sending multiple requrests to Bedrock at the same time.
 
 
- 
+## Status Badge
+[![Structure Data Project](https://github.com/aren-01/structure-dataproject/actions/workflows/deploy.yml/badge.svg)](https://github.com/aren-01/structure-dataproject/actions/workflows/deploy.yml)
